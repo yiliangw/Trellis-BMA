@@ -1,5 +1,7 @@
 from noise import gen_noisy_samples
-from marker_code import marker_encode, markder_decode
+from marker_code import marker_encode, marker_decode
+from random import random
+from bma import bma
 
 SUB_P = 0.05
 DEL_P = 0.05
@@ -11,13 +13,17 @@ def main():
     markers = ['AA']
     positions = [len(gold)/2]
 
+    random.seed(100)
+
     encoded = marker_encode(gold, 'AA', positions)
 
     samples = gen_noisy_samples(gold, 6, SUB_P, DEL_P, INS_P)
 
-    decoded = markder_decode(samples, len(gold), markers, positions)
+    decoded = [marker_decode(sample, len(gold), markers, positions) for sample in samples]
 
-    print("gold: {}\ndecoded: {}".format(gold, decoded))
+    majority = bma(decoded)
+
+    print("gold: {}\ndecoded: {}".format(gold, majority))
 
     return
 

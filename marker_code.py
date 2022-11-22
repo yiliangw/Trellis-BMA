@@ -1,4 +1,4 @@
-
+import numpy as np
 
 def marker_encode(seq, markers, positions):
     res = ''
@@ -10,6 +10,5 @@ def marker_encode(seq, markers, positions):
     res += seq[lastp:]
     return res
 
-
-def markder_decode(samples, ori_len, markers, positions):
+def marker_decode(sample, ori_len, markers, positions):
     return ''
