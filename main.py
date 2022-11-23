@@ -1,3 +1,4 @@
+from symbols import symbol_init
 from noise import gen_noisy_samples
 from marker_code import marker_encode, marker_decode
 from random import random
@@ -8,6 +9,8 @@ DEL_P = 0.05
 INS_P = 0.05
 
 def main():
+    symbol_init('ACGT')
+    
     gold = 'ACGTTCATTACGGCTA'
 
     markers = ['AA']
