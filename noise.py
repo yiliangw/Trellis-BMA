@@ -1,9 +1,9 @@
 import random
-from symbols import all_symbols()
+import symbols as sym
 
 
 def __gen_noisy_sample(gold, sub_p, del_p, ins_p):
-    symbols = all_symbols()
+    symbols = sym.all()
     res = []
     for w in gold:
         r = random.random()

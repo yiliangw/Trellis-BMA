@@ -1,31 +1,33 @@
 import numpy as np
-from symbols import symbol2digit, digit2symbol, all_symbols
+import symbols
+from symbols import symbol2digit, digit2symbol
 
-def marker_encode(seq, markers, positions):
+def __add_markers(seq, markers: list(tuple)):
     res = ''
     lastp = 0
-    for m, p in zip(markers, positions):
+    for p, m in markers:
         res += seq[lastp:p]
         res += m
         lastp = p
     res += seq[lastp:]
     return res
 
-def __forward_propogation():
+def __remove_markers(seq, markers: list(tuple)):
+    res = ''
+    p = 0
+    for pos, m in markers:
+        res += seq[p: pos]
+        p += len(m)
+    res += seq[p:]
+    return res
 
+def __convert_markers(markers: dict) -> list(tuple):
+    return sorted(list(markers.items()), key=lambda t: t[0])
 
-def marker_decode(sample, original_len, markers, positions, ins_p, del_p, sub_p):
-    # Convert the sample sequence to digits, which is more convenient
-    sample = symbol2digit(sample)
-    
-    # Construct the target sequence, where markers are represented by the corresponding 
-    # digits defined map.py, and regulare bases are specified by None
-    length = original_len + len(''.join(markers))
-    marker = [None for _ in len(length)]
-    for m, p in zip(markers, positions):
-        marker[p: p+len(m)] = symbol2digit(m)
+def encode(seq: str, markers: dict(int, str)):
+    return __add_markers(seq, __convert_markers(markers))
 
-    nsymbol = len(all_symbols())
+def __get_emission_probabilities(nsymbol, sub_p):
     # Get the match(align) emission probabilities
     m_emissions = {}
     # markers'
@@ -46,29 +48,71 @@ def marker_decode(sample, original_len, markers, positions, ins_p, del_p, sub_p)
     i_emission = np.full(nsymbol, 1 / nsymbol, dtype=np.float64)
 
     # Get the deletion emission probabilities
-    d_emission = {}
+    d_emissions = {}
     # markers'
     for i in range(nsymbol):
         e = np.zeros(nsymbol)
         e[i] = 1
-        d_emission[i] = e
+        d_emissions[i] = e
     # regular symbols'
     e = np.full(nsymbol, 1 / nsymbol, dtype=np.float64)
+    d_emissions[None] = e
 
+    return {'match': m_emissions, 'insertion': i_emission, 'deletion': d_emissions}
+
+
+
+def __decode(out_beliefs, sample, marker_flags, ins_p, del_p, sub_p):
     
+    target_len = len(marker_flags)
+    sample_len = len(sample)
+    assert(out_beliefs.shape == (target_len, len(symbols.all())))
 
-
-
-
-
+    matrix_shape = (target_len, sample_len)
+    dtype = np.float64
     
+    # Forward messages
+    f_mat = np.zeros(matrix_shape, dtype=dtype)
+    f_del = np.zeros(matrix_shape, dtype=dtype)
+    f_ins = np.zeros(matrix_shape, dtype=dtype)
+    # Backward messages
+    b_mat = np.zeros(matrix_shape, dtype=dtype)
+    b_del = np.zeros(matrix_shape, dtype=dtype)
+    b_ins = np.zeros(matrix_shape, dtype=dtype)
 
 
 
 
 
-    def __forward_propogation():
-        return None
 
-    return ''
+def decode(samples, original_len, markers, sub_p, del_p, ins_p):
+    # Convert the markers from dict to sorted list(tuple)
+    markers = __convert_markers(markers)
+    length = original_len + len(''.join(markers)) # The length of the target sequence with markers
+    # Construct the target sequence, where marker bases are specified by the corresponding 
+    # digits defined by symbols.py, and regular bases are specified by None
+    marker_flags = [None for _ in range(length)]
+    for pos, m in markers:
+        marker_flags[pos: pos+len(m)] = symbol2digit(m)
 
+    # Convert the sample sequences to list of digits, which is more convenient for manipulation
+    _samples = [symbol2digit(s) for s in samples]
+    samples = _samples
+
+    # Calculate the emission probabilities    
+    nsymbol = len(symbols.all())
+    emissions = __get_emission_probabilities(nsymbol, sub_p)
+
+    # Calculate the beliefs from each sample
+    beliefs = np.zeros([len(samples), length, nsymbol], dtype=np.float64)
+    for i, sample in enumerate(samples):
+        __decode(beliefs[i, :], sample, marker_flags, ins_p, del_p, sub_p)
+
+    # Decode the sequence (with markers) based on BMA (soft vote)
+    beliefs = np.sum(beliefs, axis=0)
+    seq_with_markers = np.argmax(beliefs, axis=-1)
+
+    # Remove the markers
+    decoded_seq = __remove_markers(seq_with_markers, markers)
+
+    return decoded_seq

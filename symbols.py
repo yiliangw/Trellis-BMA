@@ -12,5 +12,5 @@ def symbol2digit(sequence: str):
 def digit2symbol(digits: list(int)):
     return ''.join(REV_MAP[digit] for digit in digits)
 
-def all_symbols():
+def all():
     return copy.deepcopy(SYMBOLS)

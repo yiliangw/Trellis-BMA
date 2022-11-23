@@ -1,6 +1,6 @@
 from symbols import symbol_init
 from noise import gen_noisy_samples
-from marker_code import marker_encode, marker_decode
+import marker_code
 from random import random
 from bma import bma
 
@@ -9,25 +9,19 @@ DEL_P = 0.05
 INS_P = 0.05
 
 def main():
+    random.seed(100)
     symbol_init('ACGT')
     
     gold = 'ACGTTCATTACGGCTA'
 
-    markers = ['AA']
-    positions = [len(gold)/2]
-
-    random.seed(100)
-
-    encoded = marker_encode(gold, 'AA', positions)
+    markers = {len(gold)/2: 'AA'}
+    encoded = marker_code.encode(gold, markers)
 
     samples = gen_noisy_samples(gold, 6, SUB_P, DEL_P, INS_P)
 
-    decoded = [marker_decode(sample, len(gold), markers, positions) for sample in samples]
+    decoded = marker_code.decode(samples, len(gold), markers, SUB_P, DEL_P, INS_P)
 
-    majority = bma(decoded)
-
-    print("gold: {}\ndecoded: {}".format(gold, majority))
-
+    print("gold: {}\ndecoded: {}".format(gold, decoded))
     return
 
 
