@@ -1,6 +1,7 @@
 import numpy as np
 import symbols
 from symbols import symbol2digit, digit2symbol
+import enum
 
 def __add_markers(seq, markers: list(tuple)):
     res = ''
@@ -60,26 +61,57 @@ def __get_emission_probabilities(nsymbol, sub_p):
 
     return {'match': m_emissions, 'insertion': i_emission, 'deletion': d_emissions}
 
+class Status(enum.Enum):
+    MAT = 0 # match (no error or substitution)
+    INS = 1 # insertion
+    DEL = 2 # deletion
 
-
-def __decode(out_beliefs, sample, marker_flags, ins_p, del_p, sub_p):
+def __decode(out_beliefs, sample, marker_flags, transition, emission):
     
     target_len = len(marker_flags)
     sample_len = len(sample)
     assert(out_beliefs.shape == (target_len, len(symbols.all())))
 
-    matrix_shape = (target_len, sample_len)
+    sample = [None] + sample
+    marker_flags = [None] + marker_flags
+
+    matrix_shape = (target_len+1, sample_len+1)
     dtype = np.float64
     
-    # Forward messages
+    # Forward message passing
     f_mat = np.zeros(matrix_shape, dtype=dtype)
     f_del = np.zeros(matrix_shape, dtype=dtype)
     f_ins = np.zeros(matrix_shape, dtype=dtype)
+
+    # Initialization
+    f_mat[0, 0] = 1
+    f_ins[0, 0] = 0
+    f_del[0, 0] = 0
+
+    # Recursion
+    for i in range(1, matrix_shape[0]):
+        f_mat[i, 0] = 0
+        f_ins[i, 0] = 0
+        f_del[i, 0] = f_del[i-1, 0] * transition[Status.DEL, Status.DEL] * emission[Status.DEL[marker_flags[i]]]
+
+    for i in range(1, matrix_shape[1]):
+        f_mat[0, i] = 0
+        f_ins[0, i] = f_ins[0, i-1] * transition[Status.INS, Status.INS] * emission[Status.INS[sample[i]]]
+        f_del[0, i] = 0
+
+    for i in range(1, matrix_shape[0]):
+        for j in range(1, matrix_shape[1]):
+            f_mat[i, j] = (
+                f_mat[i-1, j-1] * transition[Status.MAT, Status.MAT] +
+                f_ins[i-1, j-1] * transition[Status.INS, Status.MAT] +
+                f_del[i-1, j-1] * transition[Status.DEL, Status.MAT]) *
+                                emission[Status.INS]
+
+
     # Backward messages
     b_mat = np.zeros(matrix_shape, dtype=dtype)
     b_del = np.zeros(matrix_shape, dtype=dtype)
     b_ins = np.zeros(matrix_shape, dtype=dtype)
-
 
 
 
