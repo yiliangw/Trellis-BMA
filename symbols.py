@@ -14,3 +14,6 @@ def digit2symbol(digits: list(int)):
 
 def all():
     return copy.deepcopy(SYMBOLS)
+
+def num():
+    return len(SYMBOLS)

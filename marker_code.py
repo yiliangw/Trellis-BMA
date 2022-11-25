@@ -3,6 +3,12 @@ import symbols
 from symbols import symbol2digit, digit2symbol
 import enum
 
+class Status(enum.Enum):
+    MAT = 0 # match (no error or substitution)
+    INS = 1 # insertion
+    DEL = 2 # deletion
+
+
 def __add_markers(seq, markers: list(tuple)):
     res = ''
     lastp = 0
@@ -28,105 +34,96 @@ def __convert_markers(markers: dict) -> list(tuple):
 def encode(seq: str, markers: dict(int, str)):
     return __add_markers(seq, __convert_markers(markers))
 
-def __get_emission_probabilities(nsymbol, sub_p):
-    # Match emission probabilities
-    m_emissions = {}
-    ## markers'
-    for i in range(nsymbol):
-        e = np.zeros([nsymbol, nsymbol], dtype=np.float64)
-        e[:, i] = sub_p / (nsymbol - 1)     # Assume that the different substitutions have
-                                            # equal probabilities
-        e[i, i] = 1 - sub_p
-        m_emissions[i] = e
-    ## regular symbols'
-    e = np.full([nsymbol, nsymbol], sub_p / ((nsymbol - 1) * nsymbol), dtype=np.float64)
-    for i in range(nsymbol):
-        e[i, i] = (1 - sub_p) / nsymbol
-    m_emissions[None] = e
+DTYPE=np.float64
 
+def __get_emission_probabilities(marker_flags, nsymbol, sub_p):
+    # Match emission probabilities
+    symbol_emissions = {}
+    ## Markers'
+    for i in range(nsymbol):
+        e = np.full(nsymbol, (1 - sub_p) / (nsymbol - 1), dtype=DTYPE)
+        e[i] = 1 - sub_p
+        symbol_emissions[i] = e
+    ## Regular symbols'
+    symbol_emissions[None] = np.full(nsymbol, 1 / nsymbol)
+    ## Match emission conditioned on each template symbols
+    m_emission = np.zeros((len(marker_flags), nsymbol), dtype=DTYPE)
+    for i in range(1, len(marker_flags)):
+        m_emission[i][:] = symbol_emissions[marker_flags[i]]
+    
     # Insertion emission probability
     i_emission = np.full(nsymbol, 1 / nsymbol, dtype=np.float64)
 
-    # Deletion emission probabilities
-    d_emissions = {}
-    ## markers'
-    for i in range(nsymbol):
-        e = np.zeros(nsymbol)
-        e[i] = 1
-        d_emissions[i] = e
-    ## regular symbols'
-    e = np.full(nsymbol, 1 / nsymbol, dtype=np.float64)
-    d_emissions[None] = e
-
-    return {'match': m_emissions, 'insertion': i_emission, 'deletion': d_emissions}
-
-class Status(enum.Enum):
-    MAT = 0 # match (no error or substitution)
-    INS = 1 # insertion
-    DEL = 2 # deletion
-
-def __decode(out_beliefs, sample, marker_flags, transition, emission):
+    # Deletion emission probabilities == 1
     
-    target_len = len(marker_flags)
-    sample_len = len(sample)
-    assert(out_beliefs.shape == (target_len, len(symbols.all())))
+    return {Status.MAT: m_emission, Status.INS: i_emission}
 
-    sample = [None] + sample
-    marker_flags = [None] + marker_flags
 
-    matrix_shape = (target_len+1, sample_len+1, len(symbols.all()))
-    dtype = np.float64
+def __decode(out_beliefs, sample, template_flag, transition, emission):
+    t_len = len(template_flag) # Template's length
+    s_len = len(sample) # Sample's length
+
+    mat_e = emission[Status.MAT]
+    ins_e = emission[Status.INS]
+
+    MAT, INS, DEL = Status.MAT, Status.INS, Status.DEL
 
     # Forward recursion
-    f_mat = np.zeros(matrix_shape, dtype=dtype)
-    f_del = np.zeros(matrix_shape, dtype=dtype)
-    f_ins = np.zeros(matrix_shape, dtype=dtype)
+    f = np.zeros([3, t_len, s_len], dtype=DTYPE)
+    # f[MAT, :] are match forward messages
+    # f[INS, :] are insertion forward messages
+    # f[DEL, :] are deletion forward messages
 
     ## Initialization
-    f_mat[0, 0] = 1
-    f_ins[0, 0] = 0
-    f_del[0, 0] = 0
+    f[MAT, 0, 0] = 1
+    f[INS, 0, 0] = 0
+    f[DEL, 0, 0] = 0
 
     ## Message passing
-    for i in range(1, matrix_shape[0]):
-        f_mat[i, 0, :] = 0
-        f_ins[i, 0, :] = 0
-        f_del[i, 0, :] = f_del[i-1, 0] * transition[Status.DEL, Status.DEL] * emission[Status.DEL[marker_flags[i]]]
+    for i in range(1, t_len):
+        f[MAT, i, 0] = 0
+        f[INS, i, 0] = 0
+        f[DEL, i, 0] = f[DEL, i-1, 0] * transition[DEL, DEL]
 
-    for i in range(1, matrix_shape[1]):
-        f_mat[0, i] = 0
-        f_ins[0, i] = f_ins[0, i-1] * transition[Status.INS, Status.INS] * emission[Status.INS[sample[i]]]
-        f_del[0, i] = 0
+    for i in range(1, s_len):
+        f[MAT, 0, i] = 0
+        f[INS,0, i] = f[INS, 0, i-1] * transition[INS, INS] * ins_e[sample[i]]
+        f[DEL, 0, i] = 0
 
-    for i in range(1, matrix_shape[0]):
-        for j in range(1, matrix_shape[1]):
-            f_mat[i, j] = (
-                f_mat[i-1, j-1] * transition[Status.MAT, Status.MAT] +
-                f_ins[i-1, j-1] * transition[Status.INS, Status.MAT] +
-                f_del[i-1, j-1] * transition[Status.DEL, Status.MAT]
-            ) * emission[Status.MAT[marker_flags[i]]] [sample[j]]
-            f_ins[i, j] = (
-                f_mat[i, j-1] * transition[Status.MAT, Status.INS] +
-                f_ins[i, j-1] * transition[Status.INS, Status.INS]
-            ) * emission[Status.INS] [sample[j]]
-            f_del[i, j] = (
-                f_mat[i-1, j] * transition[Status.MAT, Status.DEL] +
-                f_del[i-1, j] * transition[Status.DEL, Status.DEL]
-            ) * emission[Status.DEL[marker_flags[marker_flags[i]]]]
+    for i in range(1, t_len):
+        for j in range(1, s_len):
+            # f_mat[i, j] = (
+            #     f_mat[i-1, j-1] * transition[Status.MAT, Status.MAT] +
+            #     f_ins[i-1, j-1] * transition[Status.INS, Status.MAT] +
+            #     f_del[i-1, j-1] * transition[Status.DEL, Status.MAT]
+            # ) * mat_e[i] [sample[j]]
+            # f_ins[i, j] = (
+            #     f_mat[i, j-1] * transition[Status.MAT, Status.INS] +
+            #     f_ins[i, j-1] * transition[Status.INS, Status.INS] +
+            #     f_del[i, j-1] * transition[Status.DEL, Status.INS]
+            # ) * ins_e[sample[j]]
+            # f_del[i, j] = (
+            #     f_mat[i-1, j] * transition[Status.MAT, Status.DEL] +
+            #     f_ins[i-1, j] * transition[Status.INS, Status.DEL] +
+            #     f_del[i-1, j] * transition[Status.DEL, Status.DEL]
+            # )
+            f[MAT, i, j] = np.sum(f[:, i-1, j-1] * transition[:, MAT]) * mat_e[i][sample[j]]
+            f[INS, i, j] = np.sum(f[:, i, j-1] * transition[:, INS]) * ins_e[sample[j]]
+            f[DEL, i, j] = np.sum(f[:, i-1, j] * transition[:, DEL])
 
     # Backward recursion
-    b_mat = np.zeros(matrix_shape, dtype=dtype)
-    b_ins = np.zeros(matrix_shape, dtype=dtype)
-    b_del = np.zeros(matrix_shape, dtype=dtype)
+    b = np.zeros([3, t_len, s_len], dtype=DTYPE)
+    # b[MAT, :] are match backward messages
+    # b[INS, :] are insertion backward messages
+    # b[DEL, :] are deletion backward messages
 
     ## Initialization
-    
-    b_mat[target_len, sample_len] = 1
-    b_ins[target_len, sample_len] = 1
-    b_del[target_len, sample_len] = 1
+    b[MAT, t_len-1, s_len-1] = 1
+    b[INS, t_len-1, s_len-1] = 1
+    b[DEL, t_len-1, s_len-1] = 1
 
     ## Message passing
-    for i in range(1, target_len-1, -1):
+    for i in range(1, t_len, -1):
         b_mat[i, sample_len] = b_del[i+1, sample_len] * emission[Status.DEL][marker_flags[i+1]] * transition[Status.MAT, Status.DEL]
         b_ins[i, sample_len] = 0
         b_del[i, sample_len] = b_del[i+1, sample_len] * emission[Status.DEL][marker_flags[i+1]] * transition[Status.DEL, Status.DEL]
