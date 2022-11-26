@@ -1,0 +1,4 @@
+/.vscode
+/report/*
+!**/report/*.pdf
+!**/report/*.tex
