@@ -1,0 +1,184 @@
+\documentclass[10pt]{article}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+\usepackage{breqn}
+\usepackage{mathtools}
+\usepackage{geometry}
+\geometry{
+    a4paper,
+    total={170mm,275mm}
+}
+\usepackage{multicol}
+\usepackage{listings}
+\setlength\parindent{0pt}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily, 
+    keywordstyle=\bfseries,
+    breaklines=true,
+    breakatwhitespace=false
+}
+
+\pagenumbering{gobble}
+
+\title{Marker Code Trace Reconstruction}
+\author{Wan Yiliang}
+\date{September 2022}
+
+\begin{document}
+
+
+\begin{center}
+\hrule
+\vspace{.4cm}
+{\bf {\Huge Marker Code Trace Reconstruction}}
+\vspace{.2cm} \\
+Wan Yiliang  (A0250640R) 
+\end{center}
+\vspace{.1cm}
+\hrule
+
+\section{Forward-Backward Algorithm}
+
+  \subsection{Forward Messages}
+
+    \begin{equation}
+    \begin{aligned}
+      f^{M}(i, j) \,&=\, P(s_1...s_j, \pi^M(i, j) | \mathbf{t}) \\
+      f^{I}\,\,(i, j) \,&=\, P(s_1...s_j, \pi^I\,\,(i, j) | \mathbf{t}) \\
+      f^{D}\,(i, j) \,&=\, P(s_1...s_j, \pi^D\,(i, j) | \mathbf{t})
+    \end{aligned}
+    \end{equation}
+
+    \begin{equation} \label{eq1}
+    \begin{aligned}
+      f^{M}(i, j) \
+        &= P(\pi^M(i, j), s_1...s_j | \mathbf{t}) = \sum\nolimits_{\pi_{prev}} P(s_1...s_j, \pi^M(i, j), \pi_{prev} | \mathbf{t}) \\
+        &= P(s_1...s_j, \pi^M(i, j), \pi^M(i-1, j-1) | \mathbf{t}) + P(\pi^I(i-1, j-1), \pi^M(i, j), s_1...s_j | \mathbf{t})  \\
+        &\qquad + P(s_1...s_j, \pi^M(i, j), \pi^D(i-1, j-1) | \mathbf{t})
+    \end{aligned}
+    \end{equation}
+
+    First, we examine the first term of (\ref{eq1})
+
+    
+    \begin{equation} \label{eq2}
+    \begin{aligned}
+      P(\pi&^M(i-1, j-1), \pi^M(i, j), s_1...s_j | \mathbf{t}) \\
+        & = P(s_1...s_{j-1} | s_j, \pi^M(i-1, j-1), \pi^M(i, j), \mathbf{t}) \times P(s_j | \pi^M(i-1, j-1), \pi^M(i, j), \mathbf{t}) \\
+          &\qquad \times P(\pi^M(i, j) | \pi^M(i-1, j-1), \mathbf{t}) \times P(\pi^M(i-1, j-1) | \mathbf{t}) \\
+        & = P(s_1...s_{j-1} | \pi^M(i-1, j-1) \mathbf{t}) \times P(s_j | \pi^M(i, j), \mathbf{t}) \times P(\pi^M(i, j) | \pi^M(i-1, j-1), \mathbf{t})\\
+          &\qquad \times P(\pi^M(i-1, j-1) | \mathbf{t}) \\
+        & = P(s_1...s_{j-1} | \pi^M(i-1, j-1) \mathbf{t}) \times P(\pi^M(i-1, j-1) | \mathbf{t}) \times P(\pi^M(i, j) | \pi^M(i-1, j-1), \mathbf{t}) \\
+          &\qquad \times P(s_j | \pi^M(i, j), \mathbf{t}) \\
+        & = P(s_1...s_{j-1}, \pi^M(i-1, j-1) | \mathbf{t}) \times P(\pi^M(i, j) | \pi^M(i-1, j-1)) \times\ 
+        P(s_j | \pi^M(i, j), \mathbf{t}) \\
+        & = f^{M}(i-1, j-1) \times T_{MM} \times Memission[i](s_j)
+    \end{aligned}
+    \end{equation}
+
+    Similar procedures can be applied to the second and the third term of (\ref{eq1})
+    \begin{equation} \label{eq3}
+      P(\pi^I(i-1, j-1), \pi^M(i, j), s_1...s_j | \mathbf{t}) = f^{I}(i-1, j-1) \times T_{IM} \times Memission[i](s_j)
+    \end{equation}
+
+    \begin{equation} \label{eq4}
+      P(\pi^D(i-1, j), \pi^M(i, j), s_1...s_j | \mathbf{t}) = f^{D}(i-1, j-1) \times T_{DM} \times Memission[i](s_j)
+    \end{equation}
+    
+    Put (\ref{eq2}) (\ref{eq3}) and (\ref{eq4}) into (\ref{eq1}), and we can obtain the recursion of $f^{M}$
+    \begin{equation}
+      f^{M}(i, j) = (f^{M}(i-1, j-1) \times T_{MM}  + f^{I}(i-1, j-1) \times T_{IM} + f^{D}(i-1, j-1) \times T_{DM}) \times Memission[i](s_j)
+    \end{equation}
+
+    Similarly, we can obtain the recursion formula of $f^{I}$ and $f^{D}$
+
+    \begin{align}
+      &\begin{aligned}
+        f^{I}(i, j) &= \sum\nolimits_{\pi_{prev}} P(\pi_{prev}, \pi^I(i, j), s_1...s_j | \mathbf{t}) \\
+                    &= (f^{M}(i, j-1) \times T_{MI}  + f^{I}(i, j-1) \times T_{II} + f^{D}(i, j-1) \times T_{DI}) \times Iemission(s_j)
+      \end{aligned} \\
+      &\begin{aligned}
+        f^{D}(i, j) &= \sum\nolimits_{\pi_{prev}} P(\pi_{prev}, \pi^D(i, j), s_1...s_j | \mathbf{t}) \\
+                    &= f^{M}(i-1, j) \times T_{MD}  + f^{I}(i-1, j) \times T_{ID} + f^{D}(i-1, j) \times T_{DD}
+      \end{aligned}
+    \end{align}
+
+  \subsection{Backward Messages}
+    \begin{equation}
+    \begin{aligned}
+      b^{M}(i, j) \,&=\, P(s_{j+1}...s_N | \pi^M(i, j), \mathbf{t}) \\
+      b^{I}\,\,(i, j) \,&=\, P(s_{j+1}...s_N | \pi^I\,\,(i, j), \mathbf{t}) \\
+      b^{D}\,(i, j) \,&=\, P(s_{j+1}...s_N | \pi^D\,(i, j), \mathbf{t})
+    \end{aligned}
+    \end{equation}
+
+    \begin{equation} \label{eq121}
+    \begin{aligned}
+      b^M(i, j) \
+        &= P(s_{j+1}...s_N | \pi^{M}(i, j), \mathbf{t}) = \sum\nolimits_{\pi_{next}} P(s_{j+1}...s_N, \pi_{next} | \pi^{M}(i, j), \mathbf{t}) \\
+        &= P(s_{j+1}...s_N, \pi^M(i+1, j+1) | \pi^M(i, j), \mathbf{t}) + P(s_{j+1}...s_N, \pi^I(i, j+1) | \pi^M(i, j), \mathbf{t})  \\
+        &\qquad + P(s_{j+1}...s_N, \pi^D(i+1, j)) | \pi^M(i, j), \mathbf{t})
+    \end{aligned}
+    \end{equation}
+
+    Again, $b^{M}(i, j)$ is the sum of three terms which correspond to three possible next states. Examine the first term of (\ref{eq121}).
+
+    \begin{equation} \label{eq122}
+    \begin{aligned}
+      P(&s_{j+1}...s_N, \pi^M(i+1, j+1) | \pi^M(i, j), \mathbf{t}) \\
+        &= P(s_{j+2}...s_N | s_{j+1}, \pi^M(i+1, j+1), \pi^M(i, j), \mathbf{t}) \
+          \times P(s_{j+1}, \pi^M(i+1, j+1) | \pi^M(i, j), \mathbf{t}) \\
+        &= P(s_{j+2}...s_N | s_{j+1}, \pi^M(i+1, j+1), \pi^M(i, j), \mathbf{t}) \
+          \times P(s_{j+1} | \pi^M(i+1, j+1) \pi^M(i, j), \mathbf{t}) \\
+          &\qquad\times P(\pi^M(i+1, j+1) | \pi^M(i, j), \mathbf{t}) \\
+        &= P(s_{j+2}...s_N | \pi^M(i+1, j+1), \mathbf{t}) \
+          \times P(s_{j+1} | \pi^M(i+1, j+1), \mathbf{t}) \
+          \times P(\pi^M(i+1, j+1) | \pi^M(i, j)) \\
+        &= b^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \times T_{MM}
+    \end{aligned}
+    \end{equation}
+
+    Similar procedures can be applied to the second and the third term of (\ref{eq121})
+
+      \begin{align}
+        P(s_{j+1}...s_N, \pi^I(i, j+1) | \pi^M(i, j), \mathbf{t}) \
+          &= b^I(i, j+1) \times Iemission[s_{j+1}] \times T_{MI} \label{eq123}\\
+        P(s_{j+1}...s_N, \pi^D(i+1, j)) | \pi^M(i, j), \mathbf{t}) \
+          &= b^D(i+1, j) \times T_{MD} \label{eq124}
+      \end{align}
+
+    Put (\ref{eq122}) (\ref{eq123}) and (\ref{eq124}) into (\ref{eq121}), and we can obtain the recursion of $b^{M}$
+
+    \begin{equation}
+    \begin{aligned}
+      b^M(i, j) \
+        &= b^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \times T_{MM} \
+          + b^I(i, j+1) \times Iemission[s_{j+1}] \times T_{MI} \\
+          &\qquad+ b^D(i+1, j) \times T_{MD}
+    \end{aligned}
+    \end{equation}
+
+    Similarly, we can obtain the recursion formula of $b^{I}$ and $b^{D}$
+
+    \begin{equation}
+    \begin{aligned}
+      b^I(i, j) \
+        &= b^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \times T_{IM} \
+          + b^I(i, j+1) \times Iemission[s_{j+1}] \times T_{II} \\
+          &\qquad+ b^D(i+1, j) \times T_{ID}
+    \end{aligned}
+    \end{equation}
+
+    \begin{equation}
+    \begin{aligned}
+      b^D(i, j) \
+        &= b^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \times T_{DM} \
+          + b^I(i, j+1) \times Iemission[s_{j+1}] \times T_{DI} \\
+          &\qquad+ b^D(i+1, j) \times T_{DD}
+    \end{aligned}
+    \end{equation}
+
+\end{document}
