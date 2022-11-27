@@ -1,15 +1,15 @@
 import copy
 
-def symbol_init(symbols):
+def init(symbols):
     global SYMBOLS, MAP, REV_MAP
     SYMBOLS = list(symbols)
     MAP = {s: i for i, s in enumerate(SYMBOLS)}
     REV_MAP = {v: k for k, v in MAP.items()}
 
 def symbol2digit(sequence: str):
-    return [MAP[c] for c in str]
+    return [MAP[c] for c in sequence]
 
-def digit2symbol(digits: list(int)):
+def digit2symbol(digits: list):
     return ''.join(REV_MAP[digit] for digit in digits)
 
 def all():

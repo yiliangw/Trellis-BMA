@@ -1,4 +1,5 @@
-/.vscode
+.vscode/
+__pycache__/
 /report/*
 !**/report/*.pdf
 !**/report/*.tex

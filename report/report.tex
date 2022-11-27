@@ -211,7 +211,7 @@ Wan Yiliang  (A0250640R)
       c_{i} \widehat{f}^{M}(i, j) &= (\widehat{f}^{M}(i-1, j-1) \times T_{MM}  + \widehat{f}^{I\;\;}(i-1, j-1) \times T_{IM} + \widehat{f}^{D\;}(i-1, j-1) \times T_{DM}) \\ 
         &\qquad\times Memission[j](s_{i}) \nonumber \\
       c_{i} \widehat{f}^{I\;\;}(i, j) &= (\widehat{f}^{M}(i-1, j) \times T_{MI}  + \widehat{f}^{I\;\;}(i-1, j) \times T_{II} + \widehat{f}^{D\;}(i-1, j) \times T_{DI}) \times Iemission(s_{i}) \\
-      c_{i} \widehat{f}^{D\;}(i, j) &= \widehat{f}^{M}((i, j-1) \times T_{MD}  + \widehat{f}^{I\;\;}((i, j-1) \times T_{ID} + \widehat{f}^{D\;}((i, j-1) \times T_{DD}
+      \widehat{f}^{D\;}(i, j) &= \widehat{f}^{M}((i, j-1) \times T_{MD}  + \widehat{f}^{I\;\;}((i, j-1) \times T_{ID} + \widehat{f}^{D\;}((i, j-1) \times T_{DD}
     \end{align}
 
     \begin{equation}
@@ -228,16 +228,16 @@ Wan Yiliang  (A0250640R)
 
     \begin{equation}
     \begin{aligned}
-      c_{j+1} \widehat{b}^{M}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[j+1](s_{i+1}) \
+      c_{i+1} \widehat{b}^{M}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[j+1](s_{i+1}) \
         \times T_{MM} + \widehat{b}^{I}(i+1, j) \times Iemission(s_{i+1}) \times T_{MI} \\
-                 &\qquad+ \widehat{b}^{D}(i, j+1) \times T_{MD} \\
-      c_{j+1} \widehat{b}^{I\;\;}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[j+1](s_{i+1}) \
+                 &\qquad+ c_{i+1} \times \widehat{b}^{D}(i, j+1) \times T_{MD} \\
+      c_{i+1} \widehat{b}^{I\;\;}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[j+1](s_{i+1}) \
         \times T_{IM} + \widehat{b}^{I}(i+1, j) \times Iemission(s_{i+1}) \times T_{II} \\
-                  &\qquad+ \widehat{b}^{D}(i, j+1) \times T_{ID} \\
-      c_{j+1} \widehat{b}^{D\;}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[j+1](s_{i+1}) \
+                  &\qquad+ c_{i+1} \times \widehat{b}^{D}(i, j+1) \times T_{ID} \\
+      c_{i+1} \widehat{b}^{D\;}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[j+1](s_{i+1}) \
         \times T_{DM} + \widehat{b}^{I}(i+1, j) \times Iemission(s_{i+1}) \times T_{DI} \\
-                  &\qquad+ \widehat{b}^{D}(i, j+1) \times T_{DD}
-    \end{aligned} 
+                  &\qquad+ c_{i+1} \times \widehat{b}^{D}(i, j+1) \times T_{DD}
+    \end{aligned}
     \end{equation}
 
 \end{document}
