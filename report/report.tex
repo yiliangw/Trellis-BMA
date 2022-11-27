@@ -47,24 +47,24 @@ Wan Yiliang  (A0250640R)
     \begin{equation}
     \begin{aligned}
       f^{M}(i, j) \,&=\, P(s_1...s_j, \pi^M(i, j) | \mathbf{t}) \\
-      f^{I}\,\,(i, j) \,&=\, P(s_1...s_j, \pi^I\,\,(i, j) | \mathbf{t}) \\
-      f^{D}\,(i, j) \,&=\, P(s_1...s_j, \pi^D\,(i, j) | \mathbf{t})
+      f^{I\;\;}(i, j) \,&=\, P(s_1...s_j, \pi^{I\;\;}\,\,(i, j) | \mathbf{t}) \\
+      f^{D\;}(i, j) \,&=\, P(s_1...s_j, \pi^{D\;}\,(i, j) | \mathbf{t})
     \end{aligned}
     \end{equation}
 
-    \begin{equation} \label{eq1}
+    \begin{equation} \label{eq111}
     \begin{aligned}
       f^{M}(i, j) \
         &= P(\pi^M(i, j), s_1...s_j | \mathbf{t}) = \sum\nolimits_{\pi_{prev}} P(s_1...s_j, \pi^M(i, j), \pi_{prev} | \mathbf{t}) \\
-        &= P(s_1...s_j, \pi^M(i, j), \pi^M(i-1, j-1) | \mathbf{t}) + P(\pi^I(i-1, j-1), \pi^M(i, j), s_1...s_j | \mathbf{t})  \\
-        &\qquad + P(s_1...s_j, \pi^M(i, j), \pi^D(i-1, j-1) | \mathbf{t})
+        &= P(s_1...s_j, \pi^M(i, j), \pi^M(i-1, j-1) | \mathbf{t}) + P(\pi^{I\;\;}(i-1, j-1), \pi^M(i, j), s_1...s_j | \mathbf{t})  \\
+        &\qquad + P(s_1...s_j, \pi^M(i, j), \pi^{D\;}(i-1, j-1) | \mathbf{t})
     \end{aligned}
     \end{equation}
 
-    First, we examine the first term of (\ref{eq1})
+    First, we examine the first term of (\ref{eq111})
 
     
-    \begin{equation} \label{eq2}
+    \begin{equation} \label{eq112}
     \begin{aligned}
       P(\pi&^M(i-1, j-1), \pi^M(i, j), s_1...s_j | \mathbf{t}) \\
         & = P(s_1...s_{j-1} | s_j, \pi^M(i-1, j-1), \pi^M(i, j), \mathbf{t}) \times P(s_j | \pi^M(i-1, j-1), \pi^M(i, j), \mathbf{t}) \\
@@ -79,30 +79,31 @@ Wan Yiliang  (A0250640R)
     \end{aligned}
     \end{equation}
 
-    Similar procedures can be applied to the second and the third term of (\ref{eq1})
-    \begin{equation} \label{eq3}
-      P(\pi^I(i-1, j-1), \pi^M(i, j), s_1...s_j | \mathbf{t}) = f^{I}(i-1, j-1) \times T_{IM} \times Memission[i](s_j)
+    Similar procedures can be applied to the second and the third term of (\ref{eq111})
+    \begin{equation} \label{eq113}
+      P(\pi^{I\;\;}(i-1, j-1), \pi^M(i, j), s_1...s_j | \mathbf{t}) = f^{I\;\;}(i-1, j-1) \times T_{IM} \times Memission[i](s_j)
     \end{equation}
 
-    \begin{equation} \label{eq4}
-      P(\pi^D(i-1, j), \pi^M(i, j), s_1...s_j | \mathbf{t}) = f^{D}(i-1, j-1) \times T_{DM} \times Memission[i](s_j)
+    \begin{equation} \label{eq114}
+      P(\pi^{D\;}(i-1, j), \pi^M(i, j), s_1...s_j | \mathbf{t}) = f^{D\;}(i-1, j-1) \times T_{DM} \times Memission[i](s_j)
     \end{equation}
     
-    Put (\ref{eq2}) (\ref{eq3}) and (\ref{eq4}) into (\ref{eq1}), and we can obtain the recursion of $f^{M}$
+    Put (\ref{eq112}) (\ref{eq113}) and (\ref{eq114}) into (\ref{eq111}), and we can obtain the recursion of $f^{M}$
+    
     \begin{equation}
-      f^{M}(i, j) = (f^{M}(i-1, j-1) \times T_{MM}  + f^{I}(i-1, j-1) \times T_{IM} + f^{D}(i-1, j-1) \times T_{DM}) \times Memission[i](s_j)
+      f^{M}(i, j) = (f^{M}(i-1, j-1) \times T_{MM}  + f^{I\;\;}(i-1, j-1) \times T_{IM} + f^{D\;}(i-1, j-1) \times T_{DM}) \times Memission[i](s_j)
     \end{equation}
 
-    Similarly, we can obtain the recursion formula of $f^{I}$ and $f^{D}$
+    Similarly, we can obtain the recursion formula of $f^{I\;\;}$ and $f^{D\;}$
 
     \begin{align}
       &\begin{aligned}
-        f^{I}(i, j) &= \sum\nolimits_{\pi_{prev}} P(\pi_{prev}, \pi^I(i, j), s_1...s_j | \mathbf{t}) \\
-                    &= (f^{M}(i, j-1) \times T_{MI}  + f^{I}(i, j-1) \times T_{II} + f^{D}(i, j-1) \times T_{DI}) \times Iemission(s_j)
+        f^{I\;\;}(i, j) &= \sum\nolimits_{\pi_{prev}} P(\pi_{prev}, \pi^{I\;\;}(i, j), s_1...s_j | \mathbf{t}) \\
+                    &= (f^{M}(i, j-1) \times T_{MI}  + f^{I\;\;}(i, j-1) \times T_{II} + f^{D\;}(i, j-1) \times T_{DI}) \times Iemission(s_j)
       \end{aligned} \\
       &\begin{aligned}
-        f^{D}(i, j) &= \sum\nolimits_{\pi_{prev}} P(\pi_{prev}, \pi^D(i, j), s_1...s_j | \mathbf{t}) \\
-                    &= f^{M}(i-1, j) \times T_{MD}  + f^{I}(i-1, j) \times T_{ID} + f^{D}(i-1, j) \times T_{DD}
+        f^{D\;}(i, j) &= \sum\nolimits_{\pi_{prev}} P(\pi_{prev}, \pi^{D\;}(i, j), s_1...s_j | \mathbf{t}) \\
+                    &= f^{M}(i-1, j) \times T_{MD}  + f^{I\;\;}(i-1, j) \times T_{ID} + f^{D\;}(i-1, j) \times T_{DD}
       \end{aligned}
     \end{align}
 
@@ -110,8 +111,8 @@ Wan Yiliang  (A0250640R)
     \begin{equation}
     \begin{aligned}
       b^{M}(i, j) \,&=\, P(s_{j+1}...s_N | \pi^M(i, j), \mathbf{t}) \\
-      b^{I}\,\,(i, j) \,&=\, P(s_{j+1}...s_N | \pi^I\,\,(i, j), \mathbf{t}) \\
-      b^{D}\,(i, j) \,&=\, P(s_{j+1}...s_N | \pi^D\,(i, j), \mathbf{t})
+      b^{I\;\;}\,\,(i, j) \,&=\, P(s_{j+1}...s_N | \pi^{I\;\;}\,\,(i, j), \mathbf{t}) \\
+      b^{D\;}\,(i, j) \,&=\, P(s_{j+1}...s_N | \pi^{D\;}\,(i, j), \mathbf{t})
     \end{aligned}
     \end{equation}
 
@@ -119,8 +120,8 @@ Wan Yiliang  (A0250640R)
     \begin{aligned}
       b^M(i, j) \
         &= P(s_{j+1}...s_N | \pi^{M}(i, j), \mathbf{t}) = \sum\nolimits_{\pi_{next}} P(s_{j+1}...s_N, \pi_{next} | \pi^{M}(i, j), \mathbf{t}) \\
-        &= P(s_{j+1}...s_N, \pi^M(i+1, j+1) | \pi^M(i, j), \mathbf{t}) + P(s_{j+1}...s_N, \pi^I(i, j+1) | \pi^M(i, j), \mathbf{t})  \\
-        &\qquad + P(s_{j+1}...s_N, \pi^D(i+1, j)) | \pi^M(i, j), \mathbf{t})
+        &= P(s_{j+1}...s_N, \pi^M(i+1, j+1) | \pi^M(i, j), \mathbf{t}) + P(s_{j+1}...s_N, \pi^{I\;\;}(i, j+1) | \pi^M(i, j), \mathbf{t})  \\
+        &\qquad + P(s_{j+1}...s_N, \pi^{D\;}(i+1, j)) | \pi^M(i, j), \mathbf{t})
     \end{aligned}
     \end{equation}
 
@@ -143,12 +144,12 @@ Wan Yiliang  (A0250640R)
 
     Similar procedures can be applied to the second and the third term of (\ref{eq121})
 
-      \begin{align}
-        P(s_{j+1}...s_N, \pi^I(i, j+1) | \pi^M(i, j), \mathbf{t}) \
-          &= b^I(i, j+1) \times Iemission[s_{j+1}] \times T_{MI} \label{eq123}\\
-        P(s_{j+1}...s_N, \pi^D(i+1, j)) | \pi^M(i, j), \mathbf{t}) \
-          &= b^D(i+1, j) \times T_{MD} \label{eq124}
-      \end{align}
+    \begin{align}
+      P(s_{j+1}...s_N, \pi^{I\;\;}(i, j+1) | \pi^M(i, j), \mathbf{t}) \
+        &= b^{I\;\;}(i, j+1) \times Iemission[s_{j+1}] \times T_{MI} \label{eq123}\\
+      P(s_{j+1}...s_N, \pi^{D\;}(i+1, j)) | \pi^M(i, j), \mathbf{t}) \
+        &= b^{D\;}(i+1, j) \times T_{MD} \label{eq124}
+    \end{align}
 
     Put (\ref{eq122}) (\ref{eq123}) and (\ref{eq124}) into (\ref{eq121}), and we can obtain the recursion of $b^{M}$
 
@@ -156,29 +157,89 @@ Wan Yiliang  (A0250640R)
     \begin{aligned}
       b^M(i, j) \
         &= b^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \times T_{MM} \
-          + b^I(i, j+1) \times Iemission[s_{j+1}] \times T_{MI} \\
-          &\qquad+ b^D(i+1, j) \times T_{MD}
+          + b^{I\;\;}(i, j+1) \times Iemission[s_{j+1}] \times T_{MI} \\
+          &\qquad+ b^{D\;}(i+1, j) \times T_{MD}
     \end{aligned}
     \end{equation}
 
-    Similarly, we can obtain the recursion formula of $b^{I}$ and $b^{D}$
+    Similarly, we can obtain the recursion formula of $b^{I\;\;}$ and $b^{D\;}$
 
     \begin{equation}
     \begin{aligned}
-      b^I(i, j) \
+      b^{I\;\;}(i, j) \
         &= b^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \times T_{IM} \
-          + b^I(i, j+1) \times Iemission[s_{j+1}] \times T_{II} \\
-          &\qquad+ b^D(i+1, j) \times T_{ID}
+          + b^{I\;\;}(i, j+1) \times Iemission[s_{j+1}] \times T_{II} \\
+          &\qquad+ b^{D\;}(i+1, j) \times T_{ID}
     \end{aligned}
     \end{equation}
 
     \begin{equation}
     \begin{aligned}
-      b^D(i, j) \
+      b^{D\;}(i, j) \
         &= b^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \times T_{DM} \
-          + b^I(i, j+1) \times Iemission[s_{j+1}] \times T_{DI} \\
-          &\qquad+ b^D(i+1, j) \times T_{DD}
+          + b^{I\;\;}(i, j+1) \times Iemission[s_{j+1}] \times T_{DI} \\
+          &\qquad+ b^{D\;}(i+1, j) \times T_{DD}
     \end{aligned}
+    \end{equation}
+
+  \subsection{Scaling Factors}
+
+    \begin{equation}
+    \begin{aligned}
+      \widehat{f}^{M}(i, j) \,&=\, P(\pi^M(i, j) | s_1...s_j, \mathbf{t}) = \frac{f^{M}(i, j)}{p(s_1...s_j | \mathbf{t})} \\
+      \widehat{f}^{I\;\;}(i, j) \,&=\, P(\pi^{I\;\;}\,\,(i, j) | s_1...s_j, \mathbf{t}) = \frac{f^{I\;\;}(i, j)}{p(s_1...s_j | \mathbf{t})}\\
+      \widehat{f}^{D\;}(i, j) \,&=\, P(\pi^{D\;}\,(i, j) | s_1...s_j, \mathbf{t}) = \frac{f^{D\;}(i, j)}{p(s_1...s_j | \mathbf{t})}
+    \end{aligned}
+    \end{equation}
+
+    \begin{equation}
+    \begin{aligned}
+      \widehat{b}^{M}(i, j) \,&=\, \frac{P(s_{j+1}...s_N | \pi^M(i, j), \mathbf{t})}{p(s_{j+1}...s_N | s_1...s_j, \mathbf{t})} = \frac{b^{M}(i, j)}{p(s_{j+1}...s_N | s_1...s_j, \mathbf{t})} \\
+      \widehat{b}^{I\;\;}(i, j) \,&=\, \frac{P(s_{j+1}...s_N | \pi^{I\;\;}\,\,(i, j), \mathbf{t})}{p(s_{j+1}...s_N | s_1...s_j, \mathbf{t})} = \frac{b^{I\;\;}(i, j)}{p(s_{j+1}...s_N | s_1...s_j, \mathbf{t})} \\
+      \widehat{b}^{D\;}(i, j) \,&=\, \frac{P(s_{j+1}...s_N | \pi^{D\;}\,(i, j), \mathbf{t})}{p(s_{j+1}...s_N | s_1...s_j, \mathbf{t})} = \frac{b^{D\;}(i, j)}{p(s_{j+1}...s_N | s_1...s_j, \mathbf{t})}
+    \end{aligned}
+    \end{equation}
+
+    ---------
+
+    \begin{equation}
+      c_j = P(s_j | s_1...s_{j-1},\mathbf{t})
+    \end{equation}
+    \begin{equation}
+      P(s_1...s_m | \mathbf{t}) = \prod\nolimits_{i=1}^{m} c_i
+    \end{equation}
+
+    \begin{align}
+      c_j \widehat{f}^{M}(i, j) &= (\widehat{f}^{M}(i-1, j-1) \times T_{MM}  + \widehat{f}^{I\;\;}(i-1, j-1) \times T_{IM} + \widehat{f}^{D\;}(i-1, j-1) \times T_{DM}) \\ 
+        &\qquad\times Memission[i](s_j) \nonumber \\
+      c_j \widehat{f}^{I\;\;}(i, j) &= (\widehat{f}^{M}(i, j-1) \times T_{MI}  + \widehat{f}^{I\;\;}(i, j-1) \times T_{II} + \widehat{f}^{D\;}(i, j-1) \times T_{DI}) \times Iemission(s_j) \\
+      c_j \widehat{f}^{D\;}(i, j) &= \widehat{f}^{M}(i-1, j) \times T_{MD}  + \widehat{f}^{I\;\;}(i-1, j) \times T_{ID} + \widehat{f}^{D\;}(i-1, j) \times T_{DD}
+    \end{align}
+
+    \begin{equation}
+      \sum\nolimits_{i=0}^{M} \left( \pi^{M}(i, j) + \pi^{I\;}(i, j) \right) = 1
+    \end{equation}
+
+    \begin{equation}
+      \sum\nolimits_{i=0}^{M} \left( \widehat{f}^{M}(i, j) + \widehat{f}^{I\;}(i, j) \right) = 1
+    \end{equation}
+
+    \begin{equation}
+      c_j = \sum\nolimits_{i=0}^{M} \left( \widetilde{f}^{M}(i, j) + \widetilde{f}^{I\;}(i, j) \right)
+    \end{equation}
+
+    \begin{equation}
+    \begin{aligned}
+      c_{j+1} \widehat{b}^{M}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \
+        \times T_{MM} + \widehat{b}^{I\;\;}(i, j+1) \times Iemission[s_{j+1}] \times T_{MI} \\
+                 &\qquad+ \widehat{b}^{D\;}(i+1, j) \times T_{MD} \\
+      c_{j+1} \widehat{b}^{I\;\;}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \
+        \times T_{IM} + \widehat{b}^{I\;\;}(i, j+1) \times Iemission[s_{j+1}] \times T_{II} \\
+                  &\qquad+ \widehat{b}^{D\;}(i+1, j) \times T_{ID} \\
+      c_{j+1} \widehat{b}^{D\;}(i, j) &= \widehat{b}^M(i+1, j+1) \times Memission[i+1][s_{j+1}] \
+        \times T_{DM} + \widehat{b}^{I\;\;}(i, j+1) \times Iemission[s_{j+1}] \times T_{DI} \\
+                  &\qquad+ \widehat{b}^{D\;}(i+1, j) \times T_{DD}
+    \end{aligned} 
     \end{equation}
 
 \end{document}
