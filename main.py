@@ -8,15 +8,17 @@ DEL_P = 0.05
 INS_P = 0.05
 
 def main():
-    random.seed(99)
+    random.seed(101)
     symbols.init('ACGT')
     
-    gold = ''.join(random.choices(symbols.all(), k=96))
+    gold = ''.join(random.choices(symbols.all(), k=4))
 
-    markers = {int(len(gold)/2): 'AAAA'}
+    markers = {int(len(gold)/2): 'A'}
     encoded = marker_code.encode(gold, markers)
 
-    samples = gen_noisy_samples(gold, 10, SUB_P, DEL_P, INS_P)
+    # samples = gen_noisy_samples(gold, 1, SUB_P, DEL_P, INS_P)
+    samples = [encoded]
+
     # print("samples: {}".format(samples))
 
     decoded = marker_code.decode(samples, len(gold), markers, SUB_P, DEL_P, INS_P)

@@ -56,15 +56,14 @@ def __get_initial_emission_p(tp_marker_flag, sub_p):
     m_emission = {}
     ## Markers'
     for i in range(nsymbol):
-        e = np.full(nsymbol, (1 - sub_p) / (nsymbol - 1), dtype=DTYPE)
+        e = np.full(nsymbol, sub_p / (nsymbol - 1), dtype=DTYPE)
         e[i] = 1 - sub_p
         m_emission[i] = e
     ## Regular symbols'
     m_emission[None] = np.full(nsymbol, 1 / nsymbol)
-    ## Match emission conditioned on each template symbols
     
     # The insertion emission probability
-    i_emission = np.full(nsymbol, 1 / nsymbol, dtype=np.float64)
+    i_emission = np.full(nsymbol, 1 / nsymbol, dtype=DTYPE)
 
     # The deletion emission probability is always 1 (do not emit a specific symbol to sample)
     
@@ -95,7 +94,7 @@ def __get_template_p(sub_p):
     return {Status.MAT: p_mat, Status.DEL: p_del}
 
 
-def __sample_decode(out, sample, tp_marker_flag, transition_p, emission_p, template_p):
+def __decode_sample(out, sample, tp_marker_flag, transition_p, emission_p, template_p):
     
     tp_flag = tp_marker_flag
     t_len = len(tp_flag) # Template's length (including the dummy start symbol)
@@ -123,21 +122,28 @@ def __sample_decode(out, sample, tp_marker_flag, transition_p, emission_p, templ
     f[[MAT, INS, DEL], 0, 0] = [1, 0, 0]
     for j in range(1, t_len):
         f[[MAT, INS, DEL], 0, j] = [0, 0, np.sum(f[:, 0, j-1] * tran[:, DEL])] # Actually redundant
+    c[0] = 1
 
     ## Message passing
     for i in range(1, s_len):
-        f[[MAT, INS], i, 0] = [0, np.sum(f[[MAT, INS], i-1, 0] * tran[[MAT, INS], INS]) * ins_e[sample[i]]] # Actually redundant
+        # MATCH and INSERTION messages
+        f[[MAT, INS], i, 0] = [0, np.sum(f[:, i-1, 0] * tran[:, INS]) * ins_e[sample[i]]] # Actually redundant
         for j in range(1, t_len):
             f[[MAT, INS], i, j] = [
-                np.sum(f[:, i-1, j-1] * tran[:, MAT]) * mat_e[tp_flag[j]][sample[i]],
+                np.sum(f[:, i-1, j-1] * tran[:, MAT]) * mat_e[tp_flag[j]] [sample[i]],
                 np.sum(f[:, i-1, j] * tran[:, INS]) * ins_e[sample[i]],
             ]
         # Calculate the scaling factor
-        c[i] = np.sum(f[[MAT, INS], i, j], axis=None)
+        c[i] = np.sum(f[[MAT, INS], i, :], axis=None)
         # Scale the messages
         f[[MAT, INS], i, :] /= c[i]
+
+        # DELETION messages
+        f[DEL, i, 0] = 0
         for j in range(1, t_len):
             f[DEL, i, j] = np.sum(f[:, i, j-1] * tran[:, DEL])
+
+        assert(np.isclose(np.sum(f[[MAT, INS], i, :]), 1))
 
     # Backward recursion
     b = np.zeros([3, s_len, t_len], dtype=DTYPE)
@@ -147,13 +153,13 @@ def __sample_decode(out, sample, tp_marker_flag, transition_p, emission_p, templ
 
     ## Initialize the last row
     b[[MAT, INS, DEL], s_len-1, t_len-1] = 1
-    for j in range(0, t_len-1, -1):
+    for j in range(t_len-2, -1, -1):
         b[[MAT, INS, DEL], s_len-1, j] = tran[[MAT, INS, DEL], DEL] * b[DEL, s_len-1, j+1]
 
     ## Message passing
-    for i in range(0, s_len-1, -1):
+    for i in range(s_len-2, -1, -1):
         b[[MAT, INS, DEL], i, t_len-1] = tran[[MAT, INS, DEL], INS] * b[INS, i+1, t_len-1] * ins_e[sample[i+1]]
-        for j in range(0, t_len-1, -1):
+        for j in range(t_len-2, -1, -1):
             vec = np.array(
                 [
                     b[MAT, i+1, j+1] * mat_e[tp_flag[j+1]][sample[i+1]],
@@ -212,11 +218,12 @@ def decode(samples: list, target_length, markers: dict, sub_p, del_p, ins_p):
     nsymbol = symbols.num()
     beliefs = np.zeros([len(samples), length, nsymbol], dtype=np.float64)
     for i, sample in enumerate(samples):
-        __sample_decode(beliefs[i, :], sample, tp_marker_flag, transition_p, emission_p, template_p)
+        __decode_sample(beliefs[i, :], sample, tp_marker_flag, transition_p, emission_p, template_p)
 
     # Decode the sequence (with markers) based on BMA (soft vote)
-    belief = np.sum(beliefs, axis=0)[1:]
+    belief = np.sum(beliefs, axis=0)
     seq_with_markers = np.argmax(belief, axis=1)
+    seq_with_markers = digit2symbol(seq_with_markers)
 
     # Remove the markers
     decoded_seq = __remove_markers(seq_with_markers, markers)
