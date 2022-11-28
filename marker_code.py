@@ -125,14 +125,24 @@ def __decode_sample(out, sample, tp_marker_flag, transition_p, emission_p, templ
     c[0] = 1
 
     ## Message passing
-    for i in range(1, s_len):
+    # Row 1..M-1
+    for i in range(1, s_len-1):
         # MATCH and INSERTION messages
-        f[[MAT, INS], i, 0] = [0, np.sum(f[:, i-1, 0] * tran[:, INS]) * ins_e[sample[i]]] # Actually redundant
-        for j in range(1, t_len):
+        ## Column 0
+        f[[MAT, INS], i, 0] = [0, np.sum(f[:, i-1, 0] * tran[:, INS]) * ins_e[sample[i]]]
+        ## Column 1..N-1
+        for j in range(1, t_len-1):
             f[[MAT, INS], i, j] = [
                 np.sum(f[:, i-1, j-1] * tran[:, MAT]) * mat_e[tp_flag[j]] [sample[i]],
                 np.sum(f[:, i-1, j] * tran[:, INS]) * ins_e[sample[i]],
             ]
+        ## Column N
+        j = t_len-1
+        f[[MAT, INS], i, j] = [
+            np.sum(f[:, i-1, j-1] * tran[:, MAT]) * mat_e[tp_flag[j]] [sample[i]],
+            np.sum(f[:, i-1, j]) * ins_e[sample[i]],
+        ]
+        
         # Calculate the scaling factor
         c[i] = np.sum(f[[MAT, INS], i, :], axis=None)
         # Scale the messages
@@ -144,6 +154,32 @@ def __decode_sample(out, sample, tp_marker_flag, transition_p, emission_p, templ
             f[DEL, i, j] = np.sum(f[:, i, j-1] * tran[:, DEL])
 
         assert(np.isclose(np.sum(f[[MAT, INS], i, :]), 1))
+    
+    # Row M
+    i = s_len - 1
+    ## MATCH & INSERTION
+    ### Column 0
+    f[[MAT, INS], i, 0] = [0, np.sum(f[:, i-1, 0] * tran[:, INS]) * ins_e[sample[i]]]
+    ### Column 1..N-1
+    for j in range(1, t_len-1):
+        f[[MAT, INS], i, j] = [
+            np.sum(f[:, i-1, j-1] * tran[:, MAT]) * mat_e[tp_flag[j]] [sample[i]],
+            np.sum(f[:, i-1, j] * tran[:, INS]) * ins_e[sample[i]],
+        ]
+    ### Column N
+    j = t_len-1
+    f[[MAT, INS], i, j] = [
+        np.sum(f[:, i-1, j-1] * tran[:, MAT]) * mat_e[tp_flag[j]] [sample[i]],
+        np.sum(f[:, i-1, j]) * ins_e[sample[i]],
+    ]
+    c[i] = np.sum(f[[MAT, INS], i, :], axis=None)
+    f[[MAT, INS], i, :] /= c[i]
+    
+    ## DELETION
+    f[DEL, i, 0] = 0
+    for j in range(1, t_len):
+        f[DEL, i, j] = np.sum(f[:, i, j-1])
+
 
     # Backward recursion
     b = np.zeros([3, s_len, t_len], dtype=DTYPE)
@@ -152,13 +188,15 @@ def __decode_sample(out, sample, tp_marker_flag, transition_p, emission_p, templ
         # b[DEL, :] are deletion backward messages
 
     ## Initialize the last row
-    b[[MAT, INS, DEL], s_len-1, t_len-1] = 1
-    for j in range(t_len-2, -1, -1):
-        b[[MAT, INS, DEL], s_len-1, j] = tran[[MAT, INS, DEL], DEL] * b[DEL, s_len-1, j+1]
+    b[[MAT, INS, DEL], s_len-1, :] = 1
 
     ## Message passing
     for i in range(s_len-2, -1, -1):
-        b[[MAT, INS, DEL], i, t_len-1] = tran[[MAT, INS, DEL], INS] * b[INS, i+1, t_len-1] * ins_e[sample[i+1]]
+        b[[MAT, INS, DEL], i, t_len-1] = b[INS, i+1, t_len-1] * ins_e[sample[i+1]] / c[i+1]
+    # bc = np.sum(b[[MAT, DEL], :, t_len-1] * f[[MAT, DEL], :, t_len-1])
+    # b[[MAT, DEL, INS], :, t_len-1] /= bc
+    
+    for i in range(s_len-2, -1, -1):
         for j in range(t_len-2, -1, -1):
             vec = np.array(
                 [
@@ -172,6 +210,12 @@ def __decode_sample(out, sample, tp_marker_flag, transition_p, emission_p, templ
 
     # Calculate the beliefs of different paths
     p = f * b
+
+    sum = []
+    for j in range(1, t_len):
+        sum.append(np.sum(p[[MAT, DEL], :, j]))
+    print(sum)
+    # print(c)
 
     # Calculate the posterior of each template symbol conditioned on the beliefs of paths
     # and the sample.
@@ -229,3 +273,5 @@ def decode(samples: list, target_length, markers: dict, sub_p, del_p, ins_p):
     decoded_seq = __remove_markers(seq_with_markers, markers)
 
     return decoded_seq
+
+
