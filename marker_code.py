@@ -152,13 +152,14 @@ def __decode_sample(out, sample, tp_marker_flag, transition_p, emission_p, templ
         # b[DEL, :] are deletion backward messages
 
     ## Initialize the last row
-    b[[MAT, INS, DEL], s_len-1, t_len-1] = 1
-    for j in range(t_len-2, -1, -1):
-        b[[MAT, INS, DEL], s_len-1, j] = tran[[MAT, INS, DEL], DEL] * b[DEL, s_len-1, j+1]
+    b[[MAT, INS, DEL], s_len-1, :] = 1
+    # b[[MAT, INS, DEL], s_len-1, t_len-1] = 1
+    # for j in range(t_len-2, -1, -1):
+    #     b[[MAT, INS, DEL], s_len-1, j] = tran[[MAT, INS, DEL], DEL] * b[DEL, s_len-1, j+1]
 
     ## Message passing
     for i in range(s_len-2, -1, -1):
-        b[[MAT, INS, DEL], i, t_len-1] = tran[[MAT, INS, DEL], INS] * b[INS, i+1, t_len-1] * ins_e[sample[i+1]]
+        b[[MAT, INS, DEL], i, t_len-1] = tran[[MAT, INS, DEL], INS] / c[i+1] * b[INS, i+1, t_len-1] * ins_e[sample[i+1]]
         for j in range(t_len-2, -1, -1):
             vec = np.array(
                 [
@@ -172,6 +173,12 @@ def __decode_sample(out, sample, tp_marker_flag, transition_p, emission_p, templ
 
     # Calculate the beliefs of different paths
     p = f * b
+
+    sum = []
+    for j in range(1, t_len):
+        sum.append(np.sum(p[[MAT, DEL], :, j]))
+    print(sum)
+    print(c)
 
     # Calculate the posterior of each template symbol conditioned on the beliefs of paths
     # and the sample.
