@@ -69,12 +69,20 @@ def __get_initial_emission_p(tp_marker_flag, sub_p):
     return {Status.MAT: m_emission, Status.INS: i_emission}
 
 
-def __get_transition_p(ins_p, del_p):
+def __get_transition_p(ins_p, del_p, full_transition=False):
     mat_p = 1 - ins_p - del_p
     p = np.zeros((3, 3), dtype=DTYPE)
-    p[:, Status.MAT] = mat_p
-    p[:, Status.INS] = ins_p
-    p[:, Status.DEL] = del_p
+    
+    if full_transition:
+        p[:, Status.MAT] = mat_p
+        p[:, Status.INS] = ins_p
+        p[:, Status.DEL] = del_p
+    else:
+        p[Status.MAT, :] = [mat_p, ins_p, del_p]
+        p[Status.INS, :] = [mat_p, ins_p, 0]
+        p[Status.DEL, :] = [mat_p, 0, del_p]
+        p /= np.sum(p, axis=1)
+        
     return p
 
 
