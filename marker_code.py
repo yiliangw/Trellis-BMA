@@ -256,10 +256,10 @@ def decode(samples: list, target_length, markers: dict, sub_p, del_p, ins_p):
     tp_marker_flag = [None for _ in range(length)]
     for pos, m in markers:
         tp_marker_flag[pos: pos+len(m)] = symbol2digit(m)
-    tp_marker_flag = [-1] + tp_marker_flag  # We add a dummy start symbol at the beginning of the template
+    rev_tp_marker_flag = list(reversed(tp_marker_flag))
 
     # Convert the samples to list of digits for easy manipulation
-    _samples = [[-1] + symbol2digit(s) for s in samples] # We add a dummy start symbol at the beginning of each sample
+    _samples = [symbol2digit(s) for s in samples]
     samples = _samples
 
     sub_p = sub_p / (1 - del_p - ins_p) # Update sub_p conditioned on Status.MAT
@@ -270,15 +270,31 @@ def decode(samples: list, target_length, markers: dict, sub_p, del_p, ins_p):
     # Calculate the beliefs from each sample
     nsymbol = symbols.num()
     beliefs = np.zeros([len(samples), length, nsymbol], dtype=np.float64)
-    for i, sample in enumerate(samples):
+    rev_beliefs = np.zeros([len(samples), length, nsymbol], dtype=np.float64)
+    
+    tp_marker_flag = [-1] + tp_marker_flag  # We add a dummy start symbol at the beginning of the template
+    rev_tp_marker_flag = [-1] + rev_tp_marker_flag
+    for i, s in enumerate(samples):
+        # We add a dummy start symbol at the beginning of each sample
+        sample = [-1] + s
+        rev_sample = [-1] + list(reversed(s))
         __decode_sample(beliefs[i, :], sample, tp_marker_flag, transition_p, emission_p, template_p)
-
+        __decode_sample(rev_beliefs[i, :], rev_sample, rev_tp_marker_flag, transition_p, emission_p, template_p)
+        
     # Decode the sequence (with markers) based on BMA (soft vote)
-    belief = np.sum(beliefs, axis=0)
+    belief = np.zeros([length, nsymbol], dtype=DTYPE)
+    rbeliefs = np.flip(rev_beliefs, axis=1)
+    
+    half = int(length/2)
+    belief[:half] = np.sum(beliefs[:, 0:half, :], axis=0)
+    belief[half:] = np.sum(rbeliefs[:, half:, :], axis=0)
+    
+    belief = belief / np.sum(belief, axis=1)[:, None]
+    
     seq_with_markers = np.argmax(belief, axis=1)
     seq_with_markers = digit2symbol(seq_with_markers)
 
     # Remove the markers
     decoded_seq = __remove_markers(seq_with_markers, markers)
 
-    return decoded_seq
+    return seq_with_markers, decoded_seq
