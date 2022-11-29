@@ -17,7 +17,7 @@ def main():
     markers = {}
     encoded = marker_code.encode(gold, markers)
 
-    samples = gen_noisy_samples(gold, 6, SUB_P, DEL_P, INS_P)
+    samples = gen_noisy_samples(encoded, 6, SUB_P, DEL_P, INS_P)
     # samples = [encoded]
 
     decoded_marker, decoded = marker_code.decode(samples, len(gold), markers, SUB_P, DEL_P, INS_P)
