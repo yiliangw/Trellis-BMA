@@ -5,6 +5,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from tqdm import tqdm
 
 
 '''
@@ -127,7 +128,7 @@ def run_with_dataset(ncluster=5):
 
     template_seqs = []
     decoded_seqs = []
-    for i in range(ncluster):
+    for i in tqdm(range(ncluster), desc="Decoding"):
         center, samples = get_one_cluster()
         assert(len(center) == seq_len)
         if center == None:
@@ -157,7 +158,7 @@ def run_with_simulation(random_seed=6219, ncluster=5, nsample=5):
 
     gold_seqs = []
     decoded_seqs = []
-    for i in range(ncluster):
+    for i in tqdm(range(ncluster), desc="Decoding"):
         gold = ''.join(random.choices(symbols.all(), k=116))
         markers = {int(len(gold)*1/3): 'AA', int(len(gold)*2/3): 'AA'}
 
@@ -200,7 +201,11 @@ def main():
     SUB_P = 0.01
     DEL_P = 0.01
     INS_P = 0.01
+    CLUSTER_NUM = 100   # The maximum is 10000 for the CNR dataset
     SIMULATION = False
+    # Simulation related configurations
+    RANDOM_SEED = 6219        # The random seed for IDS channel
+    SIM_CLUSTER_SIZE = 6      # The size of each cluster (coverage)
     ############################
     
     if not os.path.exists(OUTPUT_PATH):
@@ -209,9 +214,9 @@ def main():
     symbols.init(['A', 'G', 'C', 'T'])
 
     if SIMULATION:
-        run_with_simulation(random_seed=6219, ncluster=5, nsample=6)
+        run_with_simulation(random_seed=RANDOM_SEED, ncluster=CLUSTER_NUM, nsample=SIM_CLUSTER_SIZE)
     else:
-        run_with_dataset(ncluster=5)
+        run_with_dataset(ncluster=CLUSTER_NUM)
 
     return
 

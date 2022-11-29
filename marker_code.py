@@ -1,7 +1,6 @@
 import numpy as np
 import symbols
 from symbols import symbol2digit, digit2symbol
-import enum
 
 class Status():
     MAT = 0 # match (no error or substitution)
