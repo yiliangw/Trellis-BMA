@@ -24,11 +24,14 @@ def __add_markers(seq, markers: list):
 
 def __remove_markers(seq, markers: list):
     res = ''
-    p = 0
-    for pos, m in markers:
-        res += seq[p: pos]
-        p = pos + len(m)
-    res += seq[p:]
+    cumulative_marker_len = 0
+    lastpos = 0
+    for p, m in markers:
+        pos = p + cumulative_marker_len
+        cumulative_marker_len += len(m)
+        res += seq[lastpos: pos]
+        lastpos = pos + len(m)
+    res += seq[lastpos:]
     return res
 
 
