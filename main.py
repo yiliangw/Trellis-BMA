@@ -90,7 +90,7 @@ def run_with_dataset(ncluster=5):
         return seq, markers 
 
     def process_cluster(center, samples):
-        marker_info = [(int(len(center)/3), 2), (int(len(center)*2/3), 2)]
+        marker_info = [(int(len(center)*1/4), 2), (int(len(center)*2/4), 2), (int(len(center)*3/4), 2)]
         gold, markers = seperate_markers(center, marker_info)
         decoded_with_marker, decoded = marker_code.decode(samples[:5], len(gold), markers, SUB_P, DEL_P, INS_P)
         return decoded_with_marker
@@ -198,7 +198,7 @@ def main():
     symbols.init(['A', 'G', 'C', 'T'])
 
     if SIMULATION:
-        run_with_simulation(random_seed=6219, ncluster=5, nsample=5)
+        run_with_simulation(random_seed=6219, ncluster=5, nsample=6)
     else:
         run_with_dataset(ncluster=5)
 
