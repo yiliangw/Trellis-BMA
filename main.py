@@ -26,7 +26,7 @@ def get_statistics(gold, decoded):
     assert(len(gold) == len(decoded))
     error = np.zeros(len(gold), dtype=np.int32)
     for i in range(len(gold)):
-        error[i] == int(gold[i] != decoded[i])
+        error[i] = int(gold[i] != decoded[i])
     accuracy = 1 - (np.float64(np.sum(error)) / error.shape[0])
     return accuracy, error
 
