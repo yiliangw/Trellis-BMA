@@ -20,11 +20,21 @@ def align_sequence(sequence, markers):
     return out
 
 
+def calculate_accuracy(gold, decoded):
+    assert(len(gold) == len(decoded))
+    cnt = 0
+    for g, d in zip(gold, decoded):
+        if g == d:
+            cnt += 1
+    return float(cnt) / len(gold)
+
+
 def main():
-    # random.seed()
+    
+    random.seed(6219)
     symbols.init('AGCT')
     
-    gold = ''.join(random.choices(symbols.all(), k=116))
+    gold = ''.join(random.choices(symbols.all(), k=114))
     markers = {int(len(gold)*1/3): 'AAA', int(len(gold)*2/3): 'AAA'}
 
     # Add markers to the sequence
@@ -36,7 +46,8 @@ def main():
     decoded_with_marker, decoded = marker_code.decode(samples, len(gold), markers, SUB_P, DEL_P, INS_P)
 
     print("withmarker:\t{}\nencoded:\t{}\ngold:\t\t{}\ndecoded:\t{}".format(decoded_with_marker, encoded, align_sequence(gold, markers), align_sequence(decoded, markers)))
-    print("decoded equals to gold: {}".format(decoded == gold))
+
+    print("Accuracy = {:.0%}".format(calculate_accuracy(gold, decoded)))
     return
 
 
