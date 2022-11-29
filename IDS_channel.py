@@ -16,7 +16,7 @@ def __gen_noisy_sample(gold, sub_p, del_p, ins_p):
             res.append(w)
     return ''.join(res)
 
-def gen_noisy_samples(gold, n, sub_p, del_p, ins_p):
+def generate_noisy_samples(gold, n, sub_p, del_p, ins_p):
     res = []
     for i in range(n):
         res.append(__gen_noisy_sample(gold, sub_p, del_p, ins_p))
