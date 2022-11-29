@@ -8,74 +8,33 @@ import os
 from tqdm import tqdm
 
 
-'''
-Add placeholder to sequence without markers to align it to sequence with markers
-'''
-def add_marker_placeholder(sequence, markers):
-    markers = sorted([(p, m) for p, m in markers.items()], key=(lambda t: t[0]))
-    out = ''
-    lp = 0
-    for p, m in markers:
-        out += sequence[lp:p]
-        out += '-' * len(m)
-        lp = p
-    out += sequence[lp:]
-    return out
+def main():
 
-
-def output_statistics(template_seqs, decoded_seqs):
-    assert(len(template_seqs) == len(decoded_seqs))
-    ncluster = len(template_seqs)
-    length = len(template_seqs[0])
+    ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+    ###### Configurations ######
+    global INPUT_PATH, OUTPUT_PATH
+    INPUT_PATH = ROOT_PATH + '/data/input'
+    OUTPUT_PATH = ROOT_PATH + '/data/output'
+    global SUB_P, DEL_P, INS_P
+    SUB_P = 0.01
+    DEL_P = 0.01
+    INS_P = 0.01
+    CLUSTER_NUM = 100   # The maximum is 10000 for the CNR dataset
+    SIMULATION = False
+    # Simulation related configurations
+    RANDOM_SEED = 6219        # The random seed for IDS channel
+    SIM_CLUSTER_SIZE = 6      # The size of each cluster (coverage)
+    ############################
     
-    fname_statistics = 'statistics.txt'
+    if not os.path.exists(OUTPUT_PATH):
+        os.makedirs(OUTPUT_PATH)
 
-    f = open(OUTPUT_PATH + '/' + fname_statistics, 'w')
+    symbols.init(['A', 'G', 'C', 'T'])
 
-    accuracies = np.zeros(ncluster, np.float64)
-    all_error = np.zeros(length, dtype=np.int32)
-    seq_error = np.zeros(length, dtype=np.int8)
-    for i in range(ncluster):
-        template, decoded = template_seqs[i], decoded_seqs[i]
-        seq_error[:] = 0
-        for pos in range(length):
-            seq_error[pos] = int(template[pos] != decoded[pos])
-        all_error += seq_error
-        accuracies[i] = 1 - (np.float64(np.sum(seq_error)) / length)
-        
-    hr = '-' * 20 + '\n'
-    acc_str = \
-        hr + "ACCURACY\n" + hr + \
-        "average: {:.1%}\n".format(np.average(accuracies)) + \
-        " median: {:.1%}\n".format(np.median(accuracies)) + \
-        "minimum: {:.1%}\n".format(np.amin(accuracies))
-
-    print(acc_str)
-
-    acc_str += 'for each cluster:\n'
-    for i in range(ncluster):
-        acc_str += "cluster-{:05d}:\t{:.1%}\n".format(i, accuracies[i])
-
-    f.write(acc_str + '\n')
-        
-    sum = np.sum(all_error)
-    err_distribution = all_error if sum == 0 else all_error / sum
-    distr_str = hr + 'ERROR DISTRIBUTION\n' + hr + np.array2string(err_distribution, precision=3)
-    f.write(distr_str + '\n')
-
-    plt.bar(list(range(length)), err_distribution * 100)
-    plt.xlim([0, length])
-    plt.ylim([0, min(np.amax(err_distribution)*100*1.5, 100)])
-    plt.title('Error Distribution')
-    plt.xlabel('Base Index')
-    plt.ylabel('Probability Density (%)')
-    
-    fname_err_distr = 'error_distribution.png'
-    plt.savefig(OUTPUT_PATH + '/' + fname_err_distr, format='png')
-
-    f.close()
-    print(fname_statistics + ' saved to ' + OUTPUT_PATH)
-    print(fname_err_distr + ' saved to ' + OUTPUT_PATH)
+    if SIMULATION:
+        run_with_simulation(random_seed=RANDOM_SEED, ncluster=CLUSTER_NUM, nsample=SIM_CLUSTER_SIZE)
+    else:
+        run_with_dataset(ncluster=CLUSTER_NUM)
 
     return
 
@@ -189,37 +148,78 @@ def run_with_simulation(random_seed=6219, ncluster=5, nsample=5):
     return
 
 
-def main():
+def output_statistics(template_seqs, decoded_seqs):
+    assert(len(template_seqs) == len(decoded_seqs))
+    ncluster = len(template_seqs)
+    length = len(template_seqs[0])
     
-    ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-    
-    ###### Configurations ######
-    global INPUT_PATH, OUTPUT_PATH
-    INPUT_PATH = ROOT_PATH + '/data/input'
-    OUTPUT_PATH = ROOT_PATH + '/data/output'
-    global SUB_P, DEL_P, INS_P
-    SUB_P = 0.01
-    DEL_P = 0.01
-    INS_P = 0.01
-    CLUSTER_NUM = 100   # The maximum is 10000 for the CNR dataset
-    SIMULATION = False
-    # Simulation related configurations
-    RANDOM_SEED = 6219        # The random seed for IDS channel
-    SIM_CLUSTER_SIZE = 6      # The size of each cluster (coverage)
-    ############################
-    
-    if not os.path.exists(OUTPUT_PATH):
-        os.makedirs(OUTPUT_PATH)
+    fname_statistics = 'statistics.txt'
 
-    symbols.init(['A', 'G', 'C', 'T'])
+    f = open(OUTPUT_PATH + '/' + fname_statistics, 'w')
 
-    if SIMULATION:
-        run_with_simulation(random_seed=RANDOM_SEED, ncluster=CLUSTER_NUM, nsample=SIM_CLUSTER_SIZE)
-    else:
-        run_with_dataset(ncluster=CLUSTER_NUM)
+    accuracies = np.zeros(ncluster, np.float64)
+    all_error = np.zeros(length, dtype=np.int32)
+    seq_error = np.zeros(length, dtype=np.int8)
+    for i in range(ncluster):
+        template, decoded = template_seqs[i], decoded_seqs[i]
+        seq_error[:] = 0
+        for pos in range(length):
+            seq_error[pos] = int(template[pos] != decoded[pos])
+        all_error += seq_error
+        accuracies[i] = 1 - (np.float64(np.sum(seq_error)) / length)
+        
+    hr = '-' * 20 + '\n'
+    acc_str = \
+        hr + "ACCURACY\n" + hr + \
+        "average: {:.1%}\n".format(np.average(accuracies)) + \
+        " median: {:.1%}\n".format(np.median(accuracies)) + \
+        "minimum: {:.1%}\n".format(np.amin(accuracies))
+
+    print(acc_str)
+
+    acc_str += 'for each cluster:\n'
+    for i in range(ncluster):
+        acc_str += "cluster-{:05d}:\t{:.1%}\n".format(i, accuracies[i])
+
+    f.write(acc_str + '\n')
+        
+    sum = np.sum(all_error)
+    err_distribution = all_error if sum == 0 else all_error / sum
+    distr_str = hr + 'ERROR DISTRIBUTION\n' + hr + np.array2string(err_distribution, precision=3)
+    f.write(distr_str + '\n')
+
+    plt.bar(list(range(length)), err_distribution * 100)
+    plt.xlim([0, length])
+    plt.ylim([0, min(np.amax(err_distribution)*100*1.5, 100)])
+    plt.title('Error Distribution')
+    plt.xlabel('Base Index')
+    plt.ylabel('Probability Density (%)')
+    
+    fname_err_distr = 'error_distribution.png'
+    plt.savefig(OUTPUT_PATH + '/' + fname_err_distr, format='png')
+
+    f.close()
+    print(fname_statistics + ' saved to ' + OUTPUT_PATH)
+    print(fname_err_distr + ' saved to ' + OUTPUT_PATH)
 
     return
 
 
+'''
+Add placeholder to sequence without markers to align it to sequence with markers
+'''
+def add_marker_placeholder(sequence, markers):
+    markers = sorted([(p, m) for p, m in markers.items()], key=(lambda t: t[0]))
+    out = ''
+    lp = 0
+    for p, m in markers:
+        out += sequence[lp:p]
+        out += '-' * len(m)
+        lp = p
+    out += sequence[lp:]
+    return out
+
+
 if __name__ == "__main__":
     main()
+    
