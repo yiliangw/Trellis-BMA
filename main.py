@@ -26,8 +26,10 @@ def output_statistics(template_seqs, decoded_seqs):
     assert(len(template_seqs) == len(decoded_seqs))
     ncluster = len(template_seqs)
     length = len(template_seqs[0])
+    
+    fname_statistics = 'statistics.txt'
 
-    f = open(OUTPUT_PATH + '/statistics.txt', 'w')
+    f = open(OUTPUT_PATH + '/' + fname_statistics, 'w')
 
     accuracies = np.zeros(ncluster, np.float64)
     all_error = np.zeros(length, dtype=np.int32)
@@ -39,35 +41,40 @@ def output_statistics(template_seqs, decoded_seqs):
             seq_error[pos] = int(template[pos] != decoded[pos])
         all_error += seq_error
         accuracies[i] = 1 - (np.float64(np.sum(seq_error)) / length)
+        
+    hr = '-' * 20 + '\n'
+    acc_str = \
+        hr + "ACCURACY\n" + hr + \
+        "average: {:.1%}\n".format(np.average(accuracies)) + \
+        " median: {:.1%}\n".format(np.median(accuracies)) + \
+        "minimum: {:.1%}\n".format(np.amin(accuracies))
 
-    accstr = \
-        "Average accuracy: {:.0%}\n".format(np.average(accuracies)) + \
-        "Medium accuracy:  {:.0%}\n".format(np.average(accuracies)) + \
-        "Minimum accuracy: {:.0%}\n".format(np.amin(accuracies))
+    print(acc_str)
 
-    print(accstr)
-
-    accstr += '\nAccuracies for each cluster:\n'
+    acc_str += 'for each cluster:\n'
     for i in range(ncluster):
-        accstr += "Cluster-{}:\t{:.0%}\n".format(i, accuracies[i])
+        acc_str += "cluster-{:05d}:\t{:.1%}\n".format(i, accuracies[i])
 
-    f.write(accstr)
+    f.write(acc_str + '\n')
         
     sum = np.sum(all_error)
     err_distribution = all_error if sum == 0 else all_error / sum
-    err_distribution * 100
+    distr_str = hr + 'ERROR DISTRIBUTION\n' + hr + np.array2string(err_distribution, precision=3)
+    f.write(distr_str + '\n')
 
-    plt.plot(list(range(length)), err_distribution)
-    plt.xlim([0, length-1])
-    plt.ylim([0, 100])
+    plt.bar(list(range(length)), err_distribution * 100)
+    plt.xlim([0, length])
+    plt.ylim([0, min(np.amax(err_distribution)*100*1.5, 100)])
     plt.title('Error Distribution')
     plt.xlabel('Base Index')
     plt.ylabel('Probability Density (%)')
-    plt.savefig(OUTPUT_PATH + '/error_distribution.png', format='png')
+    
+    fname_err_distr = 'error_distribution.png'
+    plt.savefig(OUTPUT_PATH + '/' + fname_err_distr, format='png')
 
     f.close()
-    print('statistics.txt saved to ' + OUTPUT_PATH)
-    print('error_distribution.png saved to ' + OUTPUT_PATH)
+    print(fname_statistics + ' saved to ' + OUTPUT_PATH)
+    print(fname_err_distr + ' saved to ' + OUTPUT_PATH)
 
     return
 
@@ -94,10 +101,11 @@ def run_with_dataset(ncluster=5):
         gold, markers = seperate_markers(center, marker_info)
         decoded_with_marker, decoded = marker_code.decode(samples[:5], len(gold), markers, SUB_P, DEL_P, INS_P)
         return decoded_with_marker
-
+    
+    fname_results = 'results.txt'
+    f_results = open(OUTPUT_PATH + '/' + fname_results, 'w+')
     f_centers = open(INPUT_PATH + '/Centers.txt', 'r')
     f_clusters = open(INPUT_PATH + '/Clusters.txt', 'r')
-    f_results = open(OUTPUT_PATH + '/results.txt', 'w+')
     
     f_clusters.readline().strip()   # Skip the first line
 
@@ -135,13 +143,15 @@ def run_with_dataset(ncluster=5):
     f_centers.close()
     f_clusters.close()
     f_results.close()
+    
+    print(fname_results + ' saved to ' + OUTPUT_PATH)
 
     return
 
 
 def run_with_simulation(random_seed=6219, ncluster=5, nsample=5):
-
-    f_results = open(OUTPUT_PATH + '/results.txt', 'w')
+    fname_results = 'results.txt'
+    f_results = open(OUTPUT_PATH + '/' + fname_results, 'w')
     
     random.seed(random_seed)
 
@@ -173,27 +183,28 @@ def run_with_simulation(random_seed=6219, ncluster=5, nsample=5):
     output_statistics(gold_seqs, decoded_seqs)
 
     f_results.close()
-    print("results.txt saves to " + OUTPUT_PATH)
+    print(fname_results + " saved to " + OUTPUT_PATH)
 
     return
 
 
 def main():
-
-    global ROOT_PATH, INPUT_PATH, OUTPUT_PATH
+    
     ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+    
+    ###### Configurations ######
+    global INPUT_PATH, OUTPUT_PATH
     INPUT_PATH = ROOT_PATH + '/data/input'
     OUTPUT_PATH = ROOT_PATH + '/data/output'
-
-    if not os.path.exists(OUTPUT_PATH):
-        os.makedirs(OUTPUT_PATH)
-
     global SUB_P, DEL_P, INS_P
     SUB_P = 0.01
     DEL_P = 0.01
     INS_P = 0.01
-
     SIMULATION = False
+    ############################
+    
+    if not os.path.exists(OUTPUT_PATH):
+        os.makedirs(OUTPUT_PATH)
 
     symbols.init(['A', 'G', 'C', 'T'])
 
