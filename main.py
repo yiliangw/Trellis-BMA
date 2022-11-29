@@ -22,45 +22,90 @@ def add_marker_placeholder(sequence, markers):
     return out
 
 
-def get_statistics(gold, decoded):
-    assert(len(gold) == len(decoded))
-    error = np.zeros(len(gold), dtype=np.int32)
-    for i in range(len(gold)):
-        error[i] = int(gold[i] != decoded[i])
-    accuracy = 1 - (np.float64(np.sum(error)) / error.shape[0])
-    return accuracy, error
-
-
-def seperate_markers(sequence, marker_info: list):
-    seq = ''
-    markers = {}
+def output_statistics(template_seqs, decoded_seqs):
+    assert(len(template_seqs) == len(decoded_seqs))
+    ncluster = len(template_seqs)
+    length = len(template_seqs[0])
     
-    cumulative_marker_len = 0
-    lastpos = 0
-    for pos, length in marker_info:
-        seq += sequence[lastpos: pos]
-        markers[pos-cumulative_marker_len] = sequence[pos: pos+length]
-        cumulative_marker_len += length
-        lastpos = pos + length
-    seq += sequence[lastpos: ]
+    fname_statistics = 'statistics.txt'
 
-    return seq, markers 
+    f = open(OUTPUT_PATH + '/' + fname_statistics, 'w')
 
+    accuracies = np.zeros(ncluster, np.float64)
+    all_error = np.zeros(length, dtype=np.int32)
+    seq_error = np.zeros(length, dtype=np.int8)
+    for i in range(ncluster):
+        template, decoded = template_seqs[i], decoded_seqs[i]
+        seq_error[:] = 0
+        for pos in range(length):
+            seq_error[pos] = int(template[pos] != decoded[pos])
+        all_error += seq_error
+        accuracies[i] = 1 - (np.float64(np.sum(seq_error)) / length)
+        
+    hr = '-' * 20 + '\n'
+    acc_str = \
+        hr + "ACCURACY\n" + hr + \
+        "average: {:.1%}\n".format(np.average(accuracies)) + \
+        " median: {:.1%}\n".format(np.median(accuracies)) + \
+        "minimum: {:.1%}\n".format(np.amin(accuracies))
 
-def process_cluster(center, samples):
-    marker_info = [(int(len(center)/3), 2), (int(len(center)*2/3), 2)]
-    gold, markers = seperate_markers(center, marker_info)
-    decoded_with_marker, decoded = marker_code.decode(samples[:5], len(gold), markers, SUB_P, DEL_P, INS_P)
-    return decoded_with_marker
+    print(acc_str)
+
+    acc_str += 'for each cluster:\n'
+    for i in range(ncluster):
+        acc_str += "cluster-{:05d}:\t{:.1%}\n".format(i, accuracies[i])
+
+    f.write(acc_str + '\n')
+        
+    sum = np.sum(all_error)
+    err_distribution = all_error if sum == 0 else all_error / sum
+    distr_str = hr + 'ERROR DISTRIBUTION\n' + hr + np.array2string(err_distribution, precision=3)
+    f.write(distr_str + '\n')
+
+    plt.bar(list(range(length)), err_distribution * 100)
+    plt.xlim([0, length])
+    plt.ylim([0, min(np.amax(err_distribution)*100*1.5, 100)])
+    plt.title('Error Distribution')
+    plt.xlabel('Base Index')
+    plt.ylabel('Probability Density (%)')
+    
+    fname_err_distr = 'error_distribution.png'
+    plt.savefig(OUTPUT_PATH + '/' + fname_err_distr, format='png')
+
+    f.close()
+    print(fname_statistics + ' saved to ' + OUTPUT_PATH)
+    print(fname_err_distr + ' saved to ' + OUTPUT_PATH)
+
+    return
 
 
 def run_with_dataset(ncluster=5):
 
+    def seperate_markers(sequence, marker_info: list):
+        seq = ''
+        markers = {}
+        
+        cumulative_marker_len = 0
+        lastpos = 0
+        for pos, length in marker_info:
+            seq += sequence[lastpos: pos]
+            markers[pos-cumulative_marker_len] = sequence[pos: pos+length]
+            cumulative_marker_len += length
+            lastpos = pos + length
+        seq += sequence[lastpos: ]
+
+        return seq, markers 
+
+    def process_cluster(center, samples):
+        marker_info = [(int(len(center)*1/4), 2), (int(len(center)*2/4), 2), (int(len(center)*3/4), 2)]
+        gold, markers = seperate_markers(center, marker_info)
+        decoded_with_marker, decoded = marker_code.decode(samples[:5], len(gold), markers, SUB_P, DEL_P, INS_P)
+        return decoded_with_marker
+    
+    fname_results = 'results.txt'
+    f_results = open(OUTPUT_PATH + '/' + fname_results, 'w+')
     f_centers = open(INPUT_PATH + '/Centers.txt', 'r')
     f_clusters = open(INPUT_PATH + '/Clusters.txt', 'r')
-    if not os.path.exists(OUTPUT_PATH):
-        os.makedirs(OUTPUT_PATH)
-    f_results = open(OUTPUT_PATH + '/results.txt', 'w+')
     
     f_clusters.readline().strip()   # Skip the first line
 
@@ -80,6 +125,8 @@ def run_with_dataset(ncluster=5):
         return center, samples
     # /get_one_cluster()
 
+    template_seqs = []
+    decoded_seqs = []
     for i in range(ncluster):
         center, samples = get_one_cluster()
         assert(len(center) == seq_len)
@@ -87,99 +134,84 @@ def run_with_dataset(ncluster=5):
             ncluster = i + 1
             break
         decoded = process_cluster(center, samples)
+        template_seqs.append(center)
+        decoded_seqs.append(decoded)
         f_results.write(decoded + '\n')
 
-    # Get statistics
-    accuracies = np.zeros(ncluster, dtype=np.float64)
-    err_cnt = np.zeros(seq_len, dtype=np.int32)
-    f_centers.seek(0)
-    f_results.seek(0)
-    for i in range(ncluster):
-        center = f_centers.readline().strip()
-        result = f_results.readline().strip()
-        accuracy, error = get_statistics(center, result)
-        accuracies[i] = accuracy
-        err_cnt += error
-    
-    print("Average accuracy:\t{:.0%}".format(np.average(accuracies)))
-    print("Medium accuracy:\t{:.0%}".format(np.median(accuracies)))
-    print("Minimum accuracy:\t{:.0%}".format(np.amin(accuracies)))
-
-    sum = np.sum(err_cnt)
-    err_distribution = err_cnt
-    if sum != 0:
-        err_distribution /= sum
-    err_distribution * 100
-    plt.plot(list(range(seq_len)), err_distribution)
-    plt.xlim([0, seq_len-1])
-    plt.ylim([0, 100])
-    plt.title('Error Distribution')
-    plt.xlabel('Base Index')
-    plt.ylabel('Probability Density (%)')
-    plt.savefig(OUTPUT_PATH + '/error_distribution.png', format='png')
-    print('error_distribution.png saved to ' + OUTPUT_PATH)
-    print('results.txt saved to ' + OUTPUT_PATH)
+    output_statistics(template_seqs, decoded_seqs)
 
     f_centers.close()
     f_clusters.close()
     f_results.close()
+    
+    print(fname_results + ' saved to ' + OUTPUT_PATH)
 
     return
 
 
-def run_with_simulation(random_seed=6219, nsample=5):
+def run_with_simulation(random_seed=6219, ncluster=5, nsample=5):
+    fname_results = 'results.txt'
+    f_results = open(OUTPUT_PATH + '/' + fname_results, 'w')
     
     random.seed(random_seed)
-    
-    gold = ''.join(random.choices(symbols.all(), k=114))
-    markers = {int(len(gold)*1/3): 'AA', int(len(gold)*2/3): 'AA'}
 
-    # Add markers to the template
-    encoded = marker_code.encode(gold, markers)
-    # Pass the encoded template through IDS channel to get noisy samples 
-    samples = IDS_channel.generate_noisy_samples(encoded, nsample, SUB_P, DEL_P, INS_P)
-    # Decode the template
-    decoded_with_marker, decoded = marker_code.decode(samples, len(gold), markers, SUB_P, DEL_P, INS_P)
+    gold_seqs = []
+    decoded_seqs = []
+    for i in range(ncluster):
+        gold = ''.join(random.choices(symbols.all(), k=116))
+        markers = {int(len(gold)*1/3): 'AA', int(len(gold)*2/3): 'AA'}
 
-    # Statistics
-    print("withmarker:\t{}".format(decoded_with_marker))
-    print("encoded:\t{}".format(encoded))
-    print("gold:\t\t{}".format(add_marker_placeholder(gold, markers)))
-    print("decoded:\t{}".format(add_marker_placeholder(decoded, markers)))
+        # Add markers to the template
+        encoded = marker_code.encode(gold, markers)
+        # Pass the encoded template through IDS channel to get noisy samples 
+        samples = IDS_channel.generate_noisy_samples(encoded, nsample, SUB_P, DEL_P, INS_P)
+        # Decode the template
+        decoded_with_marker, decoded = marker_code.decode(samples, len(gold), markers, SUB_P, DEL_P, INS_P)
 
-    accuracy, errs = get_statistics(gold, decoded)
-    print("\nAccuracy = {:.0%}".format(accuracy))
-    plt.bar(list(range(len(gold))), errs)
-    plt.xlim([0, len(gold)-1])
-    plt.ylim([0, 1.5])
-    plt.title('Error Distribution')
-    plt.xlabel('Base Index')
-    plt.ylabel('Error')
-    plt.savefig(OUTPUT_PATH + '/error_distribution.png', format='png')
-    print('error_distribution.png saved to ' + OUTPUT_PATH)
+        gold_seqs.append(gold)
+        decoded_seqs.append(decoded)
+
+        cluster_str = 'Cluster-{}\n'.format(i)
+        cluster_str += \
+            '  template: {}\n'.format(add_marker_placeholder(gold, markers)) + \
+            'm-template: {}\n'.format(encoded) + \
+            ' m-decoded: {}\n'.format(decoded_with_marker) + \
+            '   decoded: {}\n'.format(add_marker_placeholder(decoded, markers)) + '\n'
+
+        f_results.write(cluster_str)
+
+    output_statistics(gold_seqs, decoded_seqs)
+
+    f_results.close()
+    print(fname_results + " saved to " + OUTPUT_PATH)
+
     return
 
 
 def main():
-
-    global ROOT_PATH, INPUT_PATH, OUTPUT_PATH
+    
     ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+    
+    ###### Configurations ######
+    global INPUT_PATH, OUTPUT_PATH
     INPUT_PATH = ROOT_PATH + '/data/input'
     OUTPUT_PATH = ROOT_PATH + '/data/output'
-
     global SUB_P, DEL_P, INS_P
     SUB_P = 0.01
     DEL_P = 0.01
     INS_P = 0.01
-
     SIMULATION = False
+    ############################
+    
+    if not os.path.exists(OUTPUT_PATH):
+        os.makedirs(OUTPUT_PATH)
 
     symbols.init(['A', 'G', 'C', 'T'])
 
     if SIMULATION:
-        run_with_simulation(random_seed=6219, nsample=5)
+        run_with_simulation(random_seed=6219, ncluster=5, nsample=6)
     else:
-        run_with_dataset(ncluster=1)
+        run_with_dataset(ncluster=5)
 
     return
 
