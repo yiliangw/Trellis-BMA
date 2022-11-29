@@ -254,8 +254,12 @@ def decode(samples: list, target_length, markers: dict, sub_p, del_p, ins_p):
     # Construct template's marker flag, where marker bases are specified by the corresponding 
     # symbol, and regular bases are specified by None
     tp_marker_flag = [None for _ in range(length)]
-    for pos, m in markers:
+    cumulative_marker_len = 0
+    for p, m in markers:
+        pos = p + cumulative_marker_len
+        cumulative_marker_len += len(m)
         tp_marker_flag[pos: pos+len(m)] = symbol2digit(m)
+        
     rev_tp_marker_flag = list(reversed(tp_marker_flag))
 
     # Convert the samples to list of digits for easy manipulation
