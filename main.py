@@ -13,8 +13,8 @@ def main():
     ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
     ###### Configurations ######
     global INPUT_PATH, OUTPUT_PATH
-    INPUT_PATH = ROOT_PATH + '/data/input'
-    OUTPUT_PATH = ROOT_PATH + '/data/output'
+    INPUT_PATH = ROOT_PATH + '/dataset'
+    OUTPUT_PATH = ROOT_PATH + '/output'
     global SUB_P, DEL_P, INS_P
     SUB_P = 0.01
     DEL_P = 0.01

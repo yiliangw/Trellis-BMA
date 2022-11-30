@@ -3,4 +3,4 @@ __pycache__/
 /report/*
 !**/report/*.pdf
 !**/report/*.tex
-/data/output
+/output
