@@ -11,6 +11,7 @@ from tqdm import tqdm
 def main():
 
     ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
+    CLUSTER_NUM_MAX = 10000     # There are 10000 clusters in the CNR dataset
     ###### Configurations ######
     global INPUT_PATH, OUTPUT_PATH
     INPUT_PATH = ROOT_PATH + '/dataset'
@@ -19,7 +20,7 @@ def main():
     SUB_P = 0.01
     DEL_P = 0.01
     INS_P = 0.01
-    CLUSTER_NUM = 100   # The maximum is 10000 for the CNR dataset
+    CLUSTER_NUM = 5
     SIMULATION = False
     # Simulation related configurations
     RANDOM_SEED = 6219        # The random seed for IDS channel
@@ -167,40 +168,57 @@ def output_statistics(template_seqs, decoded_seqs):
             seq_error[pos] = int(template[pos] != decoded[pos])
         all_error += seq_error
         accuracies[i] = 1 - (np.float64(np.sum(seq_error)) / length)
+
         
     hr = '-' * 20 + '\n'
-    acc_str = \
-        hr + "ACCURACY\n" + hr + \
-        "average: {:.1%}\n".format(np.average(accuracies)) + \
-        " median: {:.1%}\n".format(np.median(accuracies)) + \
-        "minimum: {:.1%}\n".format(np.amin(accuracies))
+    acc_str = hr + "ACCURACY\n" + hr
+    acc_str += " max: {:.1%}\n".format(np.amax(accuracies))
+    percents = np.array([75, 50, 25])
+    for p, pt in zip(percents, np.percentile(accuracies, percents)):
+        acc_str += " {:02d}%: {:.1%}\n".format(p, pt)
+    acc_str += " min: {:.1%}\n".format(np.amin(accuracies))
+    acc_str += "mean: {:.1%}\n".format(np.mean(accuracies))
 
     print(acc_str)
 
-    acc_str += 'for each cluster:\n'
+    acc_str += '\ncluster-wise accuracies:\n'
     for i in range(ncluster):
         acc_str += "cluster-{:05d}:\t{:.1%}\n".format(i, accuracies[i])
 
+    base_accuracies = 1 - all_error / np.float64(ncluster)
+    acc_str += '\nbase-wise accuracies:\n'
+    acc_str += np.array2string(base_accuracies, separator=', ') + '\n'
+    
     f.write(acc_str + '\n')
+
+    plt.plot(list(range(length)), base_accuracies)
+    plt.xlim([0, length])
+    plt.ylim([max(np.amin(base_accuracies) * 0.85, 0), np.amax(base_accuracies)*1.1])
+    plt.title('Base-wise Accuracy')
+    plt.xlabel('Base Index')
+    plt.ylabel('Accuracy')
+    fname_base_acc = 'basewise_accuracy.png'
+    plt.savefig(OUTPUT_PATH + '/' + fname_base_acc, format='png')
         
     sum = np.sum(all_error)
-    err_distribution = all_error if sum == 0 else all_error / sum
-    distr_str = hr + 'ERROR DISTRIBUTION\n' + hr + np.array2string(err_distribution, precision=3)
+    err_distribution = np.full(length, 1 / length) if sum == 0 else all_error / sum
+    distr_str = hr + 'ERROR DISTRIBUTION\n' + hr + np.array2string(err_distribution, precision=3, separator=', ')
     f.write(distr_str + '\n')
 
     plt.bar(list(range(length)), err_distribution * 100)
     plt.xlim([0, length])
-    plt.ylim([0, min(np.amax(err_distribution)*100*1.5, 100)])
+    plt.ylim([0, min(np.amax(err_distribution)*100, 100)])
     plt.title('Error Distribution')
     plt.xlabel('Base Index')
     plt.ylabel('Probability Density (%)')
-    
     fname_err_distr = 'error_distribution.png'
     plt.savefig(OUTPUT_PATH + '/' + fname_err_distr, format='png')
 
     f.close()
-    print(fname_statistics + ' saved to ' + OUTPUT_PATH)
+
     print(fname_err_distr + ' saved to ' + OUTPUT_PATH)
+    print(fname_base_acc + ' saved to ' + OUTPUT_PATH)
+    print(fname_statistics + ' saved to ' + OUTPUT_PATH)
 
     return
 
