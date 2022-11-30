@@ -1,6 +1,6 @@
 .vscode/
 __pycache__/
-/report/*
-!**/report/*.pdf
-!**/report/*.tex
+/derivation/*
+!**/derivation/*.pdf
+!**/derivation/*.tex
 /output

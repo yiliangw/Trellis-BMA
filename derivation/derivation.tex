@@ -1,0 +1,401 @@
+\documentclass[10pt]{article}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{amsfonts}
+\usepackage{breqn}
+\usepackage{mathtools}
+\usepackage{geometry}
+\geometry{
+    a4paper,
+    total={170mm,255mm}
+}
+\usepackage{multicol}
+\usepackage{listings}
+% \setlength\parindent{0pt}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily, 
+    keywordstyle=\bfseries,
+    breaklines=true,
+    breakatwhitespace=false
+}
+
+\usepackage{enumitem}
+\setlist[enumerate]{noitemsep}
+
+
+\title{Derivation for Marker Code}
+\author{Yiliang Wan}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+
+\section{Overview}
+
+  The problem is to reconstruct the template sequence  $\mathbf{t} = \{t_1, \dots, t_N\} \in \Sigma^{N}$, given a set of prior probabilities for each template symbol $\mathbf{t}_p = \{p(t_1), \dots, p(t_N)\}$ and a known sample sequence  $\mathbf{s} = \{s_1, \dots, s_M\} \in \Sigma^{M}$, where $\Sigma$ is the alphabet.
+
+  In this derivation, we adopt the simple assumption that the probability of each $A \in \Sigma$ is equivalent if there is no other information. Also, the insertion rate $ins\_p$, deletion rate $del\_p$ and substitution rate $sub\_p$ are known.
+
+  To make the following derivation more concise, we first introduce a shorthand:
+
+  \begin{equation*}
+    Let \qquad p(A \;|\; B, \mathbf{t}_p) \coloneqq \mathbb{E}_{p(\mathbf{t})} \left[ p(A \;|\; B, \mathbf{t}) \right] \
+      = \sum\nolimits_{\mathbf{t}} p(A \;|\; B, \mathbf{t}) p(\mathbf{t})
+  \end{equation*}
+
+  To do the reconstruction, we use HMM (Hidden Markov Model), with $\pi_k$ as the latent variables, which represent the alignment states between certain $s_i$ and $t_j$. There are three kinds of alignment states:
+
+  \begin{itemize}
+    \item \textbf{Match} denoted by $\pi^{M}(i, j)$, which means that $s_i$ and $t_j$ are aligned (including substitution).
+    \item \textbf{Insertion} denoted by $\pi^{I}(i, j)$, which means that $s_i$ is an insertion not being aligned to any symbol in $\mathbf{t}$, with the last aligned or deleted symbol in $\mathbf{t}$ being $t_j$.
+    \item \textbf{Deletion} denoted by $\pi^{D}(i, j)$, which means there is a deletion for $t_j$, witch the last aligned or inserted symbol in $\mathbf{s}$ being $s_i$.
+  \end{itemize}
+
+  All the alignment states will together form an alignment path $\mathbf{\Pi} = \{ \pi_1, \dots, \pi_K\}$, where $K$ is uncertain because there are insertions and deletions.
+
+  For convenience, we further define the start symbols $s_0$ and $t_0$ for the sample and the template, respectively, and consider that they are always matched, thus we have
+
+  \begin{equation} \label{eq001}
+    \begin{aligned}
+      p\left(\pi^M(0, 0)\right) = 1 \\
+      p\left(\pi^{I\;\;}(0, 0)\right) = 0 \\
+      p\left(\pi^{D\;}(0, 0)\right) = 0 \\
+    \end{aligned}
+  \end{equation}
+
+  In general, there are two steps to decode the marker code. First, calculate $p\left(\pi^S(i, j) \;|\; \mathbf{s}, \mathbf{t}_p\right)$ for all $S \in \{M, I, D\}$, $i = 0, \dots, M$ and $j=0, \dots,N$, which constitute the belief of the alignment path $p(\Pi \;|\; \mathbf{s}, \mathbf{t}_p)$. This belief is later used for inferring the posterior of each $t_j$ by marginalizing all the possible paths
+
+  \begin{equation}
+  \begin{aligned}
+    \hat{p}(t_j \;|\; s) &= \mathbb{E}_{p(\Pi \;|\; \mathbf{s}, \mathbf{t}_p)} \Vert p(t_j, \Pi) \Vert \\
+    &= \sum\nolimits_{i=0}^N \
+    p\left(t_j \;|\; \pi^M(i, j) \right) p\left(\pi^M(i, j) \;|\; \mathbf{s}, \mathbf{t}_p\right) + \
+    p\left(t_j \;|\; \pi^D(i, j) \right) p\left(\pi^D(i, j) \;|\; \mathbf{s}, \mathbf{t}_p\right)
+  \end{aligned}
+  \end{equation}
+
+
+\section{Transition Probabilitiy}
+
+  Here we use a first order HMM, and the transition probability $ p_{trans}$ is the conditional probabilies of an alignment state given the previous alignment state
+
+  \begin{equation}
+    p_{trans} = p(\pi_k \;|\; \pi_{k-1})
+  \end{equation}
+
+  $p_{trans}$ can be represented by a $3 \times 3$ matrix $T$. For example, $T_{MI}$ is the probability of a match following an insertion.
+
+  For most of the transitions, we can use a consistent $T$ which is calculated according to the insertion rate and deletion rate of the system. However, the last symbols $s_M$ and $t_N$ should be taken care of. For all $S \in \{M, I, D\}$, we have the following conditional probabilities
+  
+  \begin{equation} \label{eq002}
+    \begin{aligned}
+      p\left(\pi^{M}(M, j) \;|\; \pi^{S}(M, j-1)\right) = 0 \\
+      p\left(\pi^{I\;\;}(M, j) \;|\; \pi^{S}(M, j-1)\right) = 0 \\
+      p\left(\pi^{D\;}(M, j) \;|\; \pi^{S}(M, j-1)\right) = 1
+    \end{aligned} \qquad for\; j=1,\dots,N-1
+  \end{equation}
+
+  and
+
+  \begin{equation} \label{eq003}
+    \begin{aligned}
+      p\left(\pi^{M}(i, N) \;|\; \pi^{S}(i-1, N)\right) = 0 \\
+      p\left(\pi^{I\;\;}(i, N) \;|\; \pi^{S}(i-1,N)\right) = 1\\
+      p\left(\pi^{D\;}(i, N) \;|\; \pi^{S}(i-1, N)\right) = 0
+    \end{aligned} \qquad for\; i=1,\dots,M-1
+  \end{equation}
+
+\section{Emission Probability}
+
+  The emission probabilies $p_{emis}$ are the conditional probabilites of a particular sample symbol $s_m$ given the corresponding alignment state and the template's prior $\mathbf{t}_p$
+
+  \begin{equation}
+    p_{emis}^{(S, n)}(s_m) = p\left(s_m \;|\; \pi^S(m, n), \mathbf{t}_p\right)
+  \end{equation}
+
+  We only consider the simple condition of  that the prior For a match, we have
+
+  \begin{equation}
+    \begin{cases}
+      p_{emis}^{(M, j)}(s_m) = 1 / |\Sigma|        &if \quad t_j\ is\ not\ a\ marker, \\
+      p_{emis}^{(M, j)}(s_m) = 1 - sub\_p          &if \quad t_j\ is\ a\ marker\ and\ t_j = s_m, \\
+      p_{emis}^{(M, j)}(s_m) = sub\_p/(1-|\Sigma|) &if \quad t_j\ is\ a\ marker\ and\ t_j \neq s_m.
+      
+    \end{cases}
+  \end{equation}
+
+  Here is where the markers provide synchronization information to the decoding process. For an insertion, we have
+
+  \begin{equation}
+    p_{emis}^{(I, j)}(s_m) = p_{emis}^{I}(s_m) = 1 / |\Sigma|
+  \end{equation}
+
+  since no relevant information is available. The deletion states will alwyas emit a dummy symbol in $\mathbf{s}$, so the emission rate is always $1$
+
+  \begin{equation}
+    p_{emis}^{(D, j)}(s_m) =  p_{emis}^{D}(s_m) =  1
+  \end{equation}
+
+    
+\section{Belief of Alignment Path}
+
+  We calculate all possible $p\left(\pi^S(i, j) \;|\; \mathbf{s}, \mathbf{t}_p\right)$ with forward-backward algorithm.
+
+  \subsection{Forward Message}
+    
+    The forward messages are defined as
+
+    \begin{equation}
+    \begin{aligned}
+      f^{M}(i, j) \,&=\, P(s_1, \dots,s_i, \pi^M(i, j) \;|\; \mathbf{t}_{p}) \\
+      f^{I\;\;}(i, j) \,&=\, P(s_1, \dots,s_i, \pi^{I\;\;}(i, j) \;|\; \mathbf{t}_{p}) \\
+      f^{D\;}(i, j) \,&=\, P(s_1, \dots,s_i, \pi^{D\;}(i, j) \;|\; \mathbf{t}_{p})
+    \end{aligned}
+    \end{equation}
+
+    We will first examine $f^{M}(i, j)$.
+
+    \begin{equation} \label{eq111}
+    \begin{aligned}
+      f^{M}(i, j) \
+        &= P(s_1, \dots,s_i, \pi^M(i, j) \;|\; \mathbf{t}_{p}) = \sum\nolimits_{\pi_{prev}} P(s_1, \dots,s_i, \pi^M(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
+        &= P(s_1, \dots,s_i, \pi^M(i, j), \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) + P( s_1, \dots,s_i, \pi^M(i, j), \pi^{I}(i-1, j-1) \;|\; \mathbf{t}_{p})  \\
+        &\qquad + P(s_1, \dots,s_i, \pi^M(i, j), \pi^{D}(i-1, j-1) \;|\; \mathbf{t}_{p})
+    \end{aligned}
+    \end{equation}
+
+    The first term of (\ref{eq111}) can be further decomposed with the conditional independent relationships in the HMM
+
+    
+    \begin{equation} \label{eq112}
+    \begin{aligned}
+      P(s_1, \dots,s_i,& \pi^M(i, j), \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \\
+        & = P(s_1, \dots,s_{i-1} \;|\; s_{i}, \pi^M(i, j), \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(s_{i} \;|\; \pi^M(i-1, j-1), \pi^M(i, j), \mathbf{t}_{p}) \\
+          &\qquad \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1), \mathbf{t}_{p}) \times P(\pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \\
+        & = P(s_1, \dots,s_{i-1} \;|\; \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(s_{i} \;|\; \pi^M(i, j), \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1))\\
+          &\qquad \times P(\pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \\
+        & = P(s_1, \dots,s_{i-1} \;|\; \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(\pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1)) \\
+          &\qquad \times P(s_{i} \;|\; \pi^M(i, j), \mathbf{t}_{p}) \\
+        & = P(s_1, \dots,s_{i-1}, \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1)) \times\ 
+        P(s_{i} \;|\; \pi^M(i, j), \mathbf{t}_{p}) \\
+        & = f^{M}(i-1, j-1) \times T_{MM} \times p_{emis}^{(M, j)}(s_{i})
+    \end{aligned}
+    \end{equation}
+
+    Similar procedures can be applied to the second and the third term of (\ref{eq111})
+
+    \begin{equation} \label{eq113}
+      P(\pi^{I}(i-1, j-1), \pi^M(i, j), s_1, \dots,s_{i} \;|\; \mathbf{t}_{p}) = f^{I}(i-1, j-1) \times T_{IM} \times p_{emis}^{(M, j)}(s_{i})
+    \end{equation}
+
+    \begin{equation} \label{eq114}
+      P(\pi^{D}(i-1, j-1), \pi^M(i, j), s_1, \dots,s_{i} \;|\; \mathbf{t}_{p}) = f^{D}(i-1, j-1) \times T_{DM} \times p_{emis}^{(M, j)}(s_{i})
+    \end{equation}
+    
+    Put (\ref{eq112}) (\ref{eq113}) and (\ref{eq114}) into (\ref{eq111}), and we can obtain the recursion of $f^{M}$
+    
+    \begin{equation} \label{eq115}
+      f^{M}(i, j) = (f^{M}(i-1, j-1) \times T_{MM}  + f^{I}(i-1, j-1) \times T_{IM} + f^{D}(i-1, j-1) \times T_{DM}) \times p_{emis}^{(M, j)}(s_{i})
+    \end{equation}
+
+    Similarly, we can obtain the recursion formula of $f^{I\;\;}$ and $f^{D\;}$
+
+    \begin{align}
+      &\begin{aligned} \label{eq116}
+        f^{I\;}(i, j) &= \sum\nolimits_{\pi_{prev}} P(s_1, \dots,s_{i}, \pi^{I}(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
+                    &= (f^{M}(i-1, j) \times T_{MI}  + f^{I\;\;}(i-1, j) \times T_{II} + f^{D}(i-1, j) \times T_{DI}) \times p_{emis}^{I}(s_{i})
+      \end{aligned} \\
+      &\begin{aligned} \label{eq117}
+        f^{D}(i, j) &= \sum\nolimits_{\pi_{prev}} P(s_1, \dots,s_{i}, \pi^{I}(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
+                    &= f^{M}(i, j-1) \times T_{MD}  + f^{I}(i, j-1) \times T_{ID} + f^{D}(i, j-1) \times T_{DD}
+      \end{aligned}
+    \end{align}
+
+  \subsection{Backward Messages}
+
+    The forward messages are defined as
+
+    \begin{equation}
+    \begin{aligned}
+      b^{M}(i, j) \,&=\, P(s_{i+1}, \dots,s_M \;|\; \pi^M(i, j), \mathbf{t}_{p}) \\
+      b^{I\;\;}(i, j) \,&=\, P(s_{i+1}, \dots,s_M \;|\; \pi^{I\;\;}(i, j), \mathbf{t}_{p}) \\
+      b^{D\;}(i, j) \,&=\, P(s_{i+1}, \dots,s_M \;|\; \pi^{D\;}(i, j), \mathbf{t}_{p})
+    \end{aligned}
+    \end{equation}
+
+    Similarly, we will first examine $b^{M}(i, j)$.
+
+    \begin{equation} \label{eq121}
+    \begin{aligned}
+      b^M(i, j) \
+        &= P(s_{i+1}, \dots,s_M \;|\; \pi^{M}(i, j), \mathbf{t}_{p}) = \sum\nolimits_{\pi_{next}} P(s_{i+1}, \dots,s_M, \pi_{next} \;|\; \pi^{M}(i, j), \mathbf{t}_{p}) \\
+        &= P(s_{i+1}, \dots,s_M, \pi^M(i+1, j+1) \;|\; \pi^M(i, j), \mathbf{t}_{p}) + P(s_{i+1}, \dots,s_M, \pi^{I}(i+1, j) \;|\; \pi^M(i, j), \mathbf{t}_{p})  \\
+        &\qquad + P(s_{i+1}, \dots,s_M, \pi^{D}(i, j+1)) \;|\; \pi^M(i, j), \mathbf{t}_{p})
+    \end{aligned}
+    \end{equation}
+
+    $b^{M}(i, j)$ is the sum of three terms which correspond to three possible next states. The first term of (\ref{eq121}) can be further decomposed
+
+    \begin{equation} \label{eq122}
+    \begin{aligned}
+      P(&s_{i+1}, \dots,s_M, \pi^M(i+1, j+1) \;|\; \pi^M(i, j), \mathbf{t}_{p}) \\
+        &= P(s_{i+2}, \dots,s_M \;|\; s_{i+1}, \pi^M(i+1, j+1), \pi^M(i, j), \mathbf{t}_{p}) \
+          \times P(s_{i+1}, \pi^M(i+1, j+1) \;|\; \pi^M(i, j), \mathbf{t}_{p}) \\
+        &= P(s_{i+2}, \dots,s_M \;|\; s_{i+1}, \pi^M(i+1, j+1), \pi^M(i, j), \mathbf{t}_{p}) \
+          \times P(s_{i+1} \;|\; \pi^M(i+1, j+1) \pi^M(i, j), \mathbf{t}_{p}) \\
+          &\qquad\times P(\pi^M(i+1, j+1) \;|\; \pi^M(i, j), \mathbf{t}_{p}) \\
+        &= P(s_{i+2}, \dots,s_M \;|\; \pi^M(i+1, j+1), \mathbf{t}_{p}) \
+          \times P(s_{i+1} \;|\; \pi^M(i+1, j+1), \mathbf{t}_{p}) \
+          \times P(\pi^M(i+1, j+1) \;|\; \pi^M(i, j)) \\
+        &= b^M(i+1, j+1) \times p_{emis}^{(M, j+1)}(s_{i+1}) \times T_{MM}
+    \end{aligned}
+    \end{equation}
+
+    Similar procedures can be applied to the second and the third term of (\ref{eq121})
+
+    \begin{align}
+      P(s_{i+1}, \dots,s_M, \pi^{I\;}(i+1, j) \;|\; \pi^M(i, j), \mathbf{t}_{p}) \
+        &= b^{I\;}(i+1, j) \times p_{emis}^{I}(s_{i+1}) \times T_{MI} \label{eq123}\\
+      P(s_{i+1}, \dots,s_M, \pi^{D}(i, j+1)) \;|\; \pi^M(i, j), \mathbf{t}_{p}) \
+        &= b^{D}(i, j+1) \times T_{MD} \label{eq124}
+    \end{align}
+
+    Put (\ref{eq122}) (\ref{eq123}) and (\ref{eq124}) into (\ref{eq121}), and we can obtain the recursion of $b^{M}$
+
+    \begin{equation} \label{eq125}
+    \begin{aligned}
+      b^M(i, j) \
+        &= b^M(i+1, j+1) \times p_{emis}^{(M, j+1)}(s_{i+1}) \times T_{MM} \
+          + b^{I}(i+1, j) \times p_{emis}^{I}(s_{i+1}) \times T_{MI} \\
+          &\qquad+ b^{D}(i, j+1) \times T_{MD}
+    \end{aligned}
+    \end{equation}
+
+    Similarly, we can obtain the recursion formula of $b^{I}$ and $b^{D\;}$
+
+    \begin{equation} \label{eq126}
+    \begin{aligned}
+      b^{I\;}(i, j) \
+        &= b^M(i+1, j+1) \times p_{emis}^{(M, j+1)}(s_{i+1}) \times T_{IM} \
+          + b^{I\;}(i+1, j) \times p_{emis}^{I}(s_{i+1}) \times T_{II} \\
+          &\qquad+ b^{D}(i, j+1) \times T_{ID}
+    \end{aligned}
+    \end{equation}
+
+    \begin{equation}  \label{eq12}
+    \begin{aligned}
+      b^{D}(i, j) \
+        &= b^M(i+1, j+1) \times p_{emis}^{(M, j+1)}(s_{i+1}) \times T_{DM} \
+          + b^{I\;}(i+1, j) \times p_{emis}^{I}(s_{i+1}) \times T_{DI} \\
+          &\qquad+ b^{D}(i, j+1) \times T_{DD}
+    \end{aligned}
+    \end{equation}
+
+  \subsection{Scaling Factors}
+
+    To prevent underflowing, we define scaled message based on the forward and backward messages. The scaled forward messages are defined as
+
+    \begin{equation}
+    \begin{aligned}
+      \widehat{f}^{M}(i, j) \,&=\, P(\pi^M(i, j) \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{M}(i, j)}{p(s_1, \dots,s_{i} \;|\; \mathbf{t}_{p})} \\
+      \widehat{f}^{I\;\;}(i, j) \,&=\, P(\pi^{I\;\;}(i, j) \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{I}(i, j)}{p(s_1, \dots,s_{i} \;|\; \mathbf{t}_{p})}\\
+      \widehat{f}^{D\;}(i, j) \,&=\, P(\pi^{D\;}\,(i, j) \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{D}(i, j)}{p(s_1, \dots,s_{i} \;|\; \mathbf{t}_{p})}
+    \end{aligned}
+    \end{equation}
+
+    Correspondingly, we can define scaled backward messages
+
+    \begin{equation}
+    \begin{aligned}
+      \widehat{b}^{M}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^M(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{M}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} \\
+      \widehat{b}^{I\;\;}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^{I}(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{I}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} \\
+      \widehat{b}^{D\;}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^{D}(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{D}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})}
+    \end{aligned}
+    \end{equation}
+
+    The scaling factors are
+
+    \begin{equation}
+      c_{i} = P(s_{i} \;|\; s_1, \dots,s_{i-1},\mathbf{t}_{p})
+    \end{equation}
+
+    and we can get (\ref{eq131}) with the chain rule.
+
+    \begin{equation} \label{eq131}
+      P(s_1, \dots,s_m \;|\; \mathbf{t}_{p}) = \prod\nolimits_{i=1}^{m} c_i
+    \end{equation}
+
+    The scaled version of (\ref{eq115}), (\ref{eq116}) and (\ref{eq117}) can be derived
+
+    \begin{align}
+      c_{i} \widehat{f}^{M}(i, j) &= (\widehat{f}^{M}(i-1, j-1) \times T_{MM}  + \widehat{f}^{I\;\;}(i-1, j-1) \times T_{IM} + \widehat{f}^{D\;}(i-1, j-1) \times T_{DM}) \label{eq132} \\ 
+        &\qquad\times p_{emis}^{(M, j)}(s_{i}) \nonumber \\
+      c_{i} \widehat{f}^{I\;\;}(i, j) &= (\widehat{f}^{M}(i-1, j) \times T_{MI}  + \widehat{f}^{I\;\;}(i-1, j) \times T_{II} + \widehat{f}^{D\;}(i-1, j) \times T_{DI}) \times p_{emis}^{I}(s_{i}) \label{eq133} \\
+      \widehat{f}^{D\;}(i, j) &= \widehat{f}^{M}((i, j-1) \times T_{MD}  + \widehat{f}^{I\;\;}((i, j-1) \times T_{ID} + \widehat{f}^{D\;}((i, j-1) \times T_{DD}
+    \end{align}
+
+    Since the sum of the probabilities for all possible paths is 1, we have
+
+    \begin{equation}
+      \sum\nolimits_{j=0}^{N} \left( \pi^{M}(i, j) + \pi^{I\;}(i, j) \right) = 1
+    \end{equation}
+
+    Similarly, we also have (\ref{eq134}) because it is also the case for a conditional probability.
+
+    \begin{equation} \label{eq134}
+      \sum\nolimits_{j=0}^{N} \left( \widehat{f}^{M}(i, j) + \widehat{f}^{I\;}(i, j) \right) = 1
+    \end{equation}
+
+    So, if we denote the right sides of (\ref{eq132}) and (\ref{eq133}) as $\widetilde{f}^{M}(i, j)$ and $\widetilde{f}^{I\;}(i, j)$, repectively, we can calulate $c_{i}$ with 
+
+    \begin{equation}
+      c_{i} = \sum\nolimits_{j=0}^{N} \left( \widetilde{f}^{M}(i, j) + \widetilde{f}^{I\;}(i, j) \right)
+    \end{equation}
+
+    Similarly, we can get the scaled version of (\ref{eq124}), (\ref{eq125}) and (\ref{eq126})
+
+    \begin{equation}
+    \begin{aligned}
+      c_{i+1} \widehat{b}^{M}(i, j) &= \widehat{b}^M(i+1, j+1) \times p_{emis}^{(M, j+1)}(s_{i+1}) \
+        \times T_{MM} + \widehat{b}^{I}(i+1, j) \times p_{emis}^{I}(s_{i+1}) \times T_{MI} \\
+                 &\qquad+ c_{i+1} \times \widehat{b}^{D}(i, j+1) \times T_{MD} \\
+      c_{i+1} \widehat{b}^{I\;\;}(i, j) &= \widehat{b}^M(i+1, j+1) \times p_{emis}^{(M, j+1)}(s_{i+1}) \
+        \times T_{IM} + \widehat{b}^{I}(i+1, j) \times p_{emis}^{I}(s_{i+1}) \times T_{II} \\
+                  &\qquad+ c_{i+1} \times \widehat{b}^{D}(i, j+1) \times T_{ID} \\
+      c_{i+1} \widehat{b}^{D\;}(i, j) &= \widehat{b}^M(i+1, j+1) \times p_{emis}^{(M, j+1)}(s_{i+1}) \
+        \times T_{DM} + \widehat{b}^{I}(i+1, j) \times p_{emis}^{I}(s_{i+1}) \times T_{DI} \\
+                  &\qquad+ c_{i+1} \times \widehat{b}^{D}(i, j+1) \times T_{DD}
+    \end{aligned}
+    \end{equation}
+
+    It is not difficuly to verify that the probabilities of all alignments can be calculated with correspoinding scaled forward and backward messages
+
+    \begin{equation} \label{eq135}
+      p\left(\pi^S(i, j) \;|\; \mathbf{s}, \mathbf{t}_p\right) = \widehat{f}^{S}(i, j)\;\widehat{b}^{S}(i, j)
+    \end{equation}
+
+    \subsection{Boundary Condition}
+
+    For all invalid $i$ and $j$, we set $p\left(\pi^S(i, j) \;|\; \mathbf{s}, \mathbf{t}_p\right)$ to 0.
+
+    For the forward messages, we can initilize the recursion with (\ref{eq001}) and $c[0] = 1$.
+    
+    For backward message passing, we initilize the last row with
+
+    \begin{equation}
+      \widehat{b}^{S}(M, j) = 1 \qquad for\ all\ S \in \{M, I, D\}\ and\ j=1, \dots, N
+    \end{equation}
+
+    which can be verified by replacing the definition of $\widehat{f}^{S}(M, j)$ into (\ref{eq135}).
+
+    Also, the message passing on the boundary should be adapted according to (\ref{eq002}) and (\ref{eq003}).
+
+
+
+\end{document}
