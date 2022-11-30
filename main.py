@@ -11,20 +11,34 @@ from tqdm import tqdm
 def main():
 
     ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
-    CLUSTER_NUM_MAX = 10000     # There are 10000 clusters in the CNR dataset
+    
+    # Metadata for the CNR dataset
+    global DATASET_SIZE, DATASET_SEQUENCE_LEN
+    DATASET_SIZE = 10000
+    DATASET_SEQUENCE_LEN = 110    
+    
+    ############################
     ###### Configurations ######
-    global INPUT_PATH, OUTPUT_PATH
-    INPUT_PATH = ROOT_PATH + '/dataset'
+    ############################
+    # Shared configurations
+    global OUTPUT_PATH
     OUTPUT_PATH = ROOT_PATH + '/output'
     global SUB_P, DEL_P, INS_P
     SUB_P = 0.01
     DEL_P = 0.01
     INS_P = 0.01
-    CLUSTER_NUM = 5
-    SIMULATION = False
-    # Simulation related configurations
-    RANDOM_SEED = 6219        # The random seed for IDS channel
-    SIM_CLUSTER_SIZE = 6      # The size of each cluster (coverage)
+    CLUSTER_NUM = DATASET_SIZE      # The number of clusters to process
+    MARKER_NUM = 4                  # Numver of marker in each sequence (uniformly distributed)
+    MARKER_LEN = 2                  # The length of each marker
+    SIMULATION = False              # True: run with CNR dataset; False: run with simulated IDS channel
+    # Dataset configurations
+    global INPUT_PATH
+    INPUT_PATH = ROOT_PATH + '/dataset'
+    # Simulation configurations
+    SIM_RANDOM_SEED     = 6219      # Random seed for IDS channel
+    SIM_SEQUENCE_LEN    = 110       # Length for each sequence
+    SIM_CLUSTER_SIZE    = 6         # Size of each cluster (coverage)
+    ############################
     ############################
     
     if not os.path.exists(OUTPUT_PATH):
@@ -33,19 +47,32 @@ def main():
     symbols.init(['A', 'G', 'C', 'T'])
 
     if SIMULATION:
-        run_with_simulation(random_seed=RANDOM_SEED, ncluster=CLUSTER_NUM, nsample=SIM_CLUSTER_SIZE)
+        run_with_simulation(
+            nmarker     = MARKER_NUM,
+            marker_len  = MARKER_LEN,
+            ncluster    = CLUSTER_NUM,
+            random_seed = SIM_RANDOM_SEED,
+            seq_len     = SIM_SEQUENCE_LEN,
+            nsample     = SIM_CLUSTER_SIZE
+        )
     else:
-        run_with_dataset(ncluster=CLUSTER_NUM)
+        run_with_dataset(
+            nmarker=MARKER_NUM, 
+            marker_len=MARKER_LEN,
+            ncluster=CLUSTER_NUM
+        )
 
     return
 
 
-def run_with_dataset(ncluster=5):
-
-    def seperate_markers(sequence, marker_info: list):
+def run_with_dataset(nmarker, marker_len, ncluster):
+    
+    seq_len = DATASET_SEQUENCE_LEN
+    marker_info = [ (int(seq_len/(nmarker+1)*i)-int(marker_len/2), marker_len) for i in range(1, nmarker+1) ]
+    
+    def seperate_markers(sequence):
         seq = ''
         markers = {}
-        
         cumulative_marker_len = 0
         lastpos = 0
         for pos, length in marker_info:
@@ -54,24 +81,21 @@ def run_with_dataset(ncluster=5):
             cumulative_marker_len += length
             lastpos = pos + length
         seq += sequence[lastpos: ]
-
         return seq, markers 
 
     def process_cluster(center, samples):
-        marker_info = [(int(len(center)*1/4), 2), (int(len(center)*2/4), 2), (int(len(center)*3/4), 2)]
-        gold, markers = seperate_markers(center, marker_info)
-        decoded_with_marker, decoded = marker_code.decode(samples[:5], len(gold), markers, SUB_P, DEL_P, INS_P)
+        assert(len(center) == seq_len)
+        gold, markers = seperate_markers(center)
+        decoded_with_marker, _ = marker_code.decode(samples[:5], len(gold), markers, SUB_P, DEL_P, INS_P)
         return decoded_with_marker
+    
     
     fname_results = 'results.txt'
     f_results = open(OUTPUT_PATH + '/' + fname_results, 'w+')
     f_centers = open(INPUT_PATH + '/Centers.txt', 'r')
     f_clusters = open(INPUT_PATH + '/Clusters.txt', 'r')
     
-    f_clusters.readline().strip()   # Skip the first line
-
-    seq_len = len(f_centers.readline().strip())
-    f_centers.seek(0)
+    f_clusters.readline()   # Skip the first line
 
     def get_one_cluster():
         center = f_centers.readline().strip()
@@ -86,8 +110,7 @@ def run_with_dataset(ncluster=5):
         return center, samples
     # /get_one_cluster()
 
-    template_seqs = []
-    decoded_seqs = []
+    
     for i in tqdm(range(ncluster), desc="Decoding"):
         center, samples = get_one_cluster()
         assert(len(center) == seq_len)
@@ -95,10 +118,15 @@ def run_with_dataset(ncluster=5):
             ncluster = i + 1
             break
         decoded = process_cluster(center, samples)
-        template_seqs.append(center)
-        decoded_seqs.append(decoded)
         f_results.write(decoded + '\n')
-
+        
+    f_centers.seek(0)
+    f_results.seek(0)
+    template_seqs = []
+    decoded_seqs = []
+    for i in range(ncluster):
+        template_seqs.append(f_centers.readline().strip())
+        decoded_seqs.append(f_results.readline().strip())
     output_statistics(template_seqs, decoded_seqs)
 
     f_centers.close()
@@ -110,7 +138,8 @@ def run_with_dataset(ncluster=5):
     return
 
 
-def run_with_simulation(random_seed=6219, ncluster=5, nsample=5):
+def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsample):
+
     fname_results = 'results.txt'
     f_results = open(OUTPUT_PATH + '/' + fname_results, 'w')
     
@@ -120,7 +149,7 @@ def run_with_simulation(random_seed=6219, ncluster=5, nsample=5):
     decoded_seqs = []
     for i in tqdm(range(ncluster), desc="Decoding"):
         gold = ''.join(random.choices(symbols.all(), k=116))
-        markers = {int(len(gold)*1/3): 'AA', int(len(gold)*2/3): 'AA'}
+        markers = { int(seq_len/(nmarker+1)*i): 'A'*marker_len for i in range(1, nmarker+1)}
 
         # Add markers to the template
         encoded = marker_code.encode(gold, markers)
@@ -169,8 +198,7 @@ def output_statistics(template_seqs, decoded_seqs):
         all_error += seq_error
         accuracies[i] = 1 - (np.float64(np.sum(seq_error)) / length)
 
-        
-    hr = '-' * 20 + '\n'
+    hr = '=' * 20 + '\n'
     acc_str = hr + "ACCURACY\n" + hr
     acc_str += " max: {:.1%}\n".format(np.amax(accuracies))
     percents = np.array([75, 50, 25])
@@ -181,24 +209,25 @@ def output_statistics(template_seqs, decoded_seqs):
 
     print(acc_str)
 
-    acc_str += '\ncluster-wise accuracies:\n'
-    for i in range(ncluster):
-        acc_str += "cluster-{:05d}:\t{:.1%}\n".format(i, accuracies[i])
+    acc_str += '\ncluster accuracy:\n'
+    acc_str += np.array2string(accuracies, separator=', ') + '\n'
 
-    base_accuracies = 1 - all_error / np.float64(ncluster)
-    acc_str += '\nbase-wise accuracies:\n'
-    acc_str += np.array2string(base_accuracies, separator=', ') + '\n'
+    idx_accuracies = 1 - all_error / np.float64(ncluster)
+    acc_str += '\nindex accuracy:\n'
+    acc_str += np.array2string(idx_accuracies, separator=', ') + '\n'
     
     f.write(acc_str + '\n')
 
-    plt.plot(list(range(length)), base_accuracies)
+    plt.plot(list(range(length)), idx_accuracies)
     plt.xlim([0, length])
-    plt.ylim([max(np.amin(base_accuracies) * 0.85, 0), np.amax(base_accuracies)*1.1])
-    plt.title('Base-wise Accuracy')
+    plt.ylim([max(np.amin(idx_accuracies) * 0.85, 0), np.amax(idx_accuracies)*1.15])
+    plt.title('Index Accuracy')
     plt.xlabel('Base Index')
     plt.ylabel('Accuracy')
-    fname_base_acc = 'basewise_accuracy.png'
-    plt.savefig(OUTPUT_PATH + '/' + fname_base_acc, format='png')
+    fname_index_acc = 'index_accuracy.png'
+    plt.savefig(OUTPUT_PATH + '/' + fname_index_acc, format='png')
+    plt.clf()
+    print(fname_index_acc + ' saved to ' + OUTPUT_PATH)
         
     sum = np.sum(all_error)
     err_distribution = np.full(length, 1 / length) if sum == 0 else all_error / sum
@@ -207,17 +236,16 @@ def output_statistics(template_seqs, decoded_seqs):
 
     plt.bar(list(range(length)), err_distribution * 100)
     plt.xlim([0, length])
-    plt.ylim([0, min(np.amax(err_distribution)*100, 100)])
+    plt.ylim([0, min(np.amax(err_distribution)*100, 100)*1.15])
     plt.title('Error Distribution')
     plt.xlabel('Base Index')
     plt.ylabel('Probability Density (%)')
     fname_err_distr = 'error_distribution.png'
     plt.savefig(OUTPUT_PATH + '/' + fname_err_distr, format='png')
+    plt.clf()
+    print(fname_err_distr + ' saved to ' + OUTPUT_PATH)
 
     f.close()
-
-    print(fname_err_distr + ' saved to ' + OUTPUT_PATH)
-    print(fname_base_acc + ' saved to ' + OUTPUT_PATH)
     print(fname_statistics + ' saved to ' + OUTPUT_PATH)
 
     return
