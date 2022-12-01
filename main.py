@@ -104,7 +104,7 @@ def run_with_dataset(nmarker, marker_len, ncluster):
         samples = []
         while True:
             s = f_clusters.readline().strip()
-            if s.startswith('='):
+            if len(s) == 0 or s.startswith('='):
                 break
             samples.append(s)
         return center, samples
