@@ -1,4 +1,4 @@
-The dataset here is the [Clustered Nanopore Reads (CNR) Dataset](git@github.com:microsoft/clustered-nanopore-reads-dataset.git) from Microsoft's. It is represented by two files:
+The dataset here is the [Clustered Nanopore Reads (CNR) Dataset](https://github.com/microsoft/clustered-nanopore-reads-dataset) from Microsoft. It is represented by two files:
 
 - *Centers.txt* This files contains 10,000 strings of length 110 in the alphabet {A,C,G,T} generated uniformly at random.
 
