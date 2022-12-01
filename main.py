@@ -5,6 +5,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import sys
 from tqdm import tqdm
 
 
@@ -179,6 +180,8 @@ def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsa
 
 
 def output_statistics(template_seqs, decoded_seqs):
+    np.set_printoptions(threshold=sys.maxsize)  # To print ndarray in full length
+
     assert(len(template_seqs) == len(decoded_seqs))
     ncluster = len(template_seqs)
     length = len(template_seqs[0])
@@ -209,11 +212,11 @@ def output_statistics(template_seqs, decoded_seqs):
 
     print(acc_str)
 
-    acc_str += '\ncluster accuracy:\n'
+    acc_str += '\nclusters\' accuracies:\n'
     acc_str += np.array2string(accuracies, separator=', ') + '\n'
 
     idx_accuracies = 1 - all_error / np.float64(ncluster)
-    acc_str += '\nindex accuracy:\n'
+    acc_str += '\npositional accuracies:\n'
     acc_str += np.array2string(idx_accuracies, separator=', ') + '\n'
     
     f.write(acc_str + '\n')
@@ -221,10 +224,10 @@ def output_statistics(template_seqs, decoded_seqs):
     plt.plot(list(range(length)), idx_accuracies)
     plt.xlim([0, length])
     plt.ylim([max(np.amin(idx_accuracies) * 0.85, 0), np.amax(idx_accuracies)*1.15])
-    plt.title('Index Accuracy')
+    plt.title('Positional Accuracy')
     plt.xlabel('Base Index')
     plt.ylabel('Accuracy')
-    fname_index_acc = 'index_accuracy.png'
+    fname_index_acc = 'positional_accuracy.png'
     plt.savefig(OUTPUT_PATH + '/' + fname_index_acc, format='png')
     plt.clf()
     print(fname_index_acc + ' saved to ' + OUTPUT_PATH)
@@ -237,10 +240,10 @@ def output_statistics(template_seqs, decoded_seqs):
     plt.bar(list(range(length)), err_distribution * 100)
     plt.xlim([0, length])
     plt.ylim([0, min(np.amax(err_distribution)*100, 100)*1.15])
-    plt.title('Error Distribution')
+    plt.title('Positional Error Distribution')
     plt.xlabel('Base Index')
     plt.ylabel('Probability Density (%)')
-    fname_err_distr = 'error_distribution.png'
+    fname_err_distr = 'positional_error_distribution.png'
     plt.savefig(OUTPUT_PATH + '/' + fname_err_distr, format='png')
     plt.clf()
     print(fname_err_distr + ' saved to ' + OUTPUT_PATH)
