@@ -81,9 +81,9 @@
   \end{equation}
 
 
-\section{Transition Probabilitiy}
+\section{Transition Probability}
 
-  Here we use a first order HMM, and the transition probability $ p_{trans}$ is the conditional probabilies of an alignment state given the previous alignment state
+  Here we use a first order HMM, and the transition probability $ p_{trans}$ is the conditional probabilities of an alignment state given the previous alignment state
 
   \begin{equation}
     p_{trans} = p(\pi_k \;|\; \pi_{k-1})
@@ -113,7 +113,7 @@
 
 \section{Emission Probability}
 
-  The emission probabilies $p_{emis}$ are the conditional probabilites of a particular sample symbol $s_m$ given the corresponding alignment state and the template's prior $\mathbf{t}_p$
+  The emission probabilities $p_{emis}$ are the conditional probabilities of a particular sample symbol $s_m$ given the corresponding alignment state and the template's prior $\mathbf{t}_p$
 
   \begin{equation}
     p_{emis}^{(S, n)}(s_m) = p\left(s_m \;|\; \pi^S(m, n), \mathbf{t}_p\right)
@@ -136,7 +136,7 @@
     p_{emis}^{(I, j)}(s_m) = p_{emis}^{I}(s_m) = 1 / |\Sigma|
   \end{equation}
 
-  since no relevant information is available. The deletion states will alwyas emit a dummy symbol in $\mathbf{s}$, so the emission rate is always $1$
+  since no relevant information is available. The deletion states will always emit a dummy symbol in $\mathbf{s}$, so the emission rate is always $1$
 
   \begin{equation}
     p_{emis}^{(D, j)}(s_m) =  p_{emis}^{D}(s_m) =  1
@@ -299,7 +299,7 @@
 
   \subsection{Scaling Factors}
 
-    To prevent underflowing, we define scaled message based on the forward and backward messages. The scaled forward messages are defined as
+    To deal with underflow problem, we define scaled message based on the forward and backward messages. The scaled forward messages are defined as
 
     \begin{equation}
     \begin{aligned}
@@ -352,7 +352,7 @@
       \sum\nolimits_{j=0}^{N} \left( \widehat{f}^{M}(i, j) + \widehat{f}^{I\;}(i, j) \right) = 1
     \end{equation}
 
-    So, if we denote the right sides of (\ref{eq132}) and (\ref{eq133}) as $\widetilde{f}^{M}(i, j)$ and $\widetilde{f}^{I\;}(i, j)$, repectively, we can calulate $c_{i}$ with 
+    So, if we denote the right sides of (\ref{eq132}) and (\ref{eq133}) as $\widetilde{f}^{M}(i, j)$ and $\widetilde{f}^{I\;}(i, j)$, respectively, we can calculate $c_{i}$ with 
 
     \begin{equation}
       c_{i} = \sum\nolimits_{j=0}^{N} \left( \widetilde{f}^{M}(i, j) + \widetilde{f}^{I\;}(i, j) \right)
@@ -374,7 +374,7 @@
     \end{aligned}
     \end{equation}
 
-    It is not difficuly to verify that the probabilities of all alignments can be calculated with correspoinding scaled forward and backward messages
+    It is not difficult to verify that the probabilities of all alignments can be calculated with corresponding scaled forward and backward messages
 
     \begin{equation} \label{eq135}
       p\left(\pi^S(i, j) \;|\; \mathbf{s}, \mathbf{t}_p\right) = \widehat{f}^{S}(i, j)\;\widehat{b}^{S}(i, j)
@@ -384,9 +384,9 @@
 
     For all invalid $i$ and $j$, we set $p\left(\pi^S(i, j) \;|\; \mathbf{s}, \mathbf{t}_p\right)$ to 0.
 
-    For the forward messages, we can initilize the recursion with (\ref{eq001}) and $c[0] = 1$.
+    For the forward messages, we can initialize the recursion with (\ref{eq001}) and $c[0] = 1$.
     
-    For backward message passing, we initilize the last row with
+    For backward message passing, we initialize the last row with
 
     \begin{equation}
       \widehat{b}^{S}(M, j) = 1 \qquad for\ all\ S \in \{M, I, D\}\ and\ j=1, \dots, N
@@ -395,7 +395,5 @@
     which can be verified by replacing the definition of $\widehat{f}^{S}(M, j)$ into (\ref{eq135}).
 
     Also, the message passing on the boundary should be adapted according to (\ref{eq002}) and (\ref{eq003}).
-
-
 
 \end{document}

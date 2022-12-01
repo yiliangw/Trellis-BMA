@@ -1,6 +1,6 @@
 # Trace Reconstruction with Marker Code
 
-This is a python implementation for trace reconstruction with marker code [[1]](#r1) in the context of DNA-based data storage. You can run it directly with either the [CNR dataset](https://github.com/microsoft/clustered-nanopore-reads-dataset) [[2]](#r2) or a simple simulated IDS channel ([IDS_channel.py](IDS_channel.py)). A [derivation](derivation/derivation.pdf) for relevent formulas is also provided.
+This is a python implementation for trace reconstruction with marker code [[1]](#r1) in the context of DNA-based data storage. You can run it directly with either the [CNR dataset](https://github.com/microsoft/clustered-nanopore-reads-dataset) [[2]](#r2) or a simple simulated IDS channel ([IDS_channel.py](IDS_channel.py)). A [derivation](derivation/derivation.pdf) for relevant formulas is also provided.
 
 ## Quick Start
 ```
