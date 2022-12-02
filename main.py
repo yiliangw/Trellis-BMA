@@ -242,7 +242,7 @@ def output_statistics(template_seqs, decoded_seqs):
     plt.ylim([0, min(np.amax(err_distribution)*100, 100)*1.15])
     plt.title('Positional Error Distribution')
     plt.xlabel('Base Index')
-    plt.ylabel('Probability Density (%)')
+    plt.ylabel('Probability Mass (%)')
     fname_err_distr = 'positional_error_distribution.png'
     plt.savefig(OUTPUT_PATH + '/' + fname_err_distr, format='png')
     plt.clf()
