@@ -153,9 +153,9 @@
 
     \begin{equation}
     \begin{aligned}
-      f^{M}(i, j) \,&=\, P(s_1, \dots,s_i, \pi^M(i, j) \;|\; \mathbf{t}_{p}) \\
-      f^{I\;\;}(i, j) \,&=\, P(s_1, \dots,s_i, \pi^{I\;\;}(i, j) \;|\; \mathbf{t}_{p}) \\
-      f^{D\;}(i, j) \,&=\, P(s_1, \dots,s_i, \pi^{D\;}(i, j) \;|\; \mathbf{t}_{p})
+      f^{M}(i, j) \,&=\, P(s_0, \dots,s_i, \pi^M(i, j) \;|\; \mathbf{t}_{p}) \\
+      f^{I\;\;}(i, j) \,&=\, P(s_0, \dots,s_i, \pi^{I\;\;}(i, j) \;|\; \mathbf{t}_{p}) \\
+      f^{D\;}(i, j) \,&=\, P(s_0, \dots,s_i, \pi^{D\;}(i, j) \;|\; \mathbf{t}_{p})
     \end{aligned}
     \end{equation}
 
@@ -164,9 +164,9 @@
     \begin{equation} \label{eq111}
     \begin{aligned}
       f^{M}(i, j) \
-        &= P(s_1, \dots,s_i, \pi^M(i, j) \;|\; \mathbf{t}_{p}) = \sum\nolimits_{\pi_{prev}} P(s_1, \dots,s_i, \pi^M(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
-        &= P(s_1, \dots,s_i, \pi^M(i, j), \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) + P( s_1, \dots,s_i, \pi^M(i, j), \pi^{I}(i-1, j-1) \;|\; \mathbf{t}_{p})  \\
-        &\qquad + P(s_1, \dots,s_i, \pi^M(i, j), \pi^{D}(i-1, j-1) \;|\; \mathbf{t}_{p})
+        &= P(s_0, \dots,s_i, \pi^M(i, j) \;|\; \mathbf{t}_{p}) = \sum\nolimits_{\pi_{prev}} P(s_0, \dots,s_i, \pi^M(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
+        &= P(s_0, \dots,s_i, \pi^M(i, j), \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) + P( s_0, \dots,s_i, \pi^M(i, j), \pi^{I}(i-1, j-1) \;|\; \mathbf{t}_{p})  \\
+        &\qquad + P(s_0, \dots,s_i, \pi^M(i, j), \pi^{D}(i-1, j-1) \;|\; \mathbf{t}_{p})
     \end{aligned}
     \end{equation}
 
@@ -175,14 +175,14 @@
     
     \begin{equation} \label{eq112}
     \begin{aligned}
-      P(s_1, \dots,s_i,& \pi^M(i, j), \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \\
-        & = P(s_1, \dots,s_{i-1} \;|\; s_{i}, \pi^M(i, j), \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(s_{i} \;|\; \pi^M(i-1, j-1), \pi^M(i, j), \mathbf{t}_{p}) \\
+      P(s_0, \dots,s_i,& \pi^M(i, j), \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \\
+        & = P(s_0, \dots,s_{i-1} \;|\; s_{i}, \pi^M(i, j), \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(s_{i} \;|\; \pi^M(i-1, j-1), \pi^M(i, j), \mathbf{t}_{p}) \\
           &\qquad \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1), \mathbf{t}_{p}) \times P(\pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \\
-        & = P(s_1, \dots,s_{i-1} \;|\; \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(s_{i} \;|\; \pi^M(i, j), \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1))\\
+        & = P(s_0, \dots,s_{i-1} \;|\; \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(s_{i} \;|\; \pi^M(i, j), \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1))\\
           &\qquad \times P(\pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \\
-        & = P(s_1, \dots,s_{i-1} \;|\; \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(\pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1)) \\
+        & = P(s_0, \dots,s_{i-1} \;|\; \pi^M(i-1, j-1) \mathbf{t}_{p}) \times P(\pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1)) \\
           &\qquad \times P(s_{i} \;|\; \pi^M(i, j), \mathbf{t}_{p}) \\
-        & = P(s_1, \dots,s_{i-1}, \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1)) \times\ 
+        & = P(s_0, \dots,s_{i-1}, \pi^M(i-1, j-1) \;|\; \mathbf{t}_{p}) \times P(\pi^M(i, j) \;|\; \pi^M(i-1, j-1)) \times\ 
         P(s_{i} \;|\; \pi^M(i, j), \mathbf{t}_{p}) \\
         & = f^{M}(i-1, j-1) \times T_{MM} \times p_{emis}^{(M, j)}(s_{i})
     \end{aligned}
@@ -191,11 +191,11 @@
     Similar procedures can be applied to the second and the third term of (\ref{eq111})
 
     \begin{equation} \label{eq113}
-      P(\pi^{I}(i-1, j-1), \pi^M(i, j), s_1, \dots,s_{i} \;|\; \mathbf{t}_{p}) = f^{I}(i-1, j-1) \times T_{IM} \times p_{emis}^{(M, j)}(s_{i})
+      P(\pi^{I}(i-1, j-1), \pi^M(i, j), s_0, \dots,s_{i} \;|\; \mathbf{t}_{p}) = f^{I}(i-1, j-1) \times T_{IM} \times p_{emis}^{(M, j)}(s_{i})
     \end{equation}
 
     \begin{equation} \label{eq114}
-      P(\pi^{D}(i-1, j-1), \pi^M(i, j), s_1, \dots,s_{i} \;|\; \mathbf{t}_{p}) = f^{D}(i-1, j-1) \times T_{DM} \times p_{emis}^{(M, j)}(s_{i})
+      P(\pi^{D}(i-1, j-1), \pi^M(i, j), s_0, \dots,s_{i} \;|\; \mathbf{t}_{p}) = f^{D}(i-1, j-1) \times T_{DM} \times p_{emis}^{(M, j)}(s_{i})
     \end{equation}
     
     Put (\ref{eq112}) (\ref{eq113}) and (\ref{eq114}) into (\ref{eq111}), and we can obtain the recursion of $f^{M}$
@@ -208,11 +208,11 @@
 
     \begin{align}
       &\begin{aligned} \label{eq116}
-        f^{I\;}(i, j) &= \sum\nolimits_{\pi_{prev}} P(s_1, \dots,s_{i}, \pi^{I}(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
+        f^{I\;}(i, j) &= \sum\nolimits_{\pi_{prev}} P(s_0, \dots,s_{i}, \pi^{I}(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
                     &= (f^{M}(i-1, j) \times T_{MI}  + f^{I\;\;}(i-1, j) \times T_{II} + f^{D}(i-1, j) \times T_{DI}) \times p_{emis}^{I}(s_{i})
       \end{aligned} \\
       &\begin{aligned} \label{eq117}
-        f^{D}(i, j) &= \sum\nolimits_{\pi_{prev}} P(s_1, \dots,s_{i}, \pi^{I}(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
+        f^{D}(i, j) &= \sum\nolimits_{\pi_{prev}} P(s_0, \dots,s_{i}, \pi^{I}(i, j), \pi_{prev} \;|\; \mathbf{t}_{p}) \\
                     &= f^{M}(i, j-1) \times T_{MD}  + f^{I}(i, j-1) \times T_{ID} + f^{D}(i, j-1) \times T_{DD}
       \end{aligned}
     \end{align}
@@ -303,9 +303,9 @@
 
     \begin{equation}
     \begin{aligned}
-      \widehat{f}^{M}(i, j) \,&=\, P(\pi^M(i, j) \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{M}(i, j)}{p(s_1, \dots,s_{i} \;|\; \mathbf{t}_{p})} \\
-      \widehat{f}^{I\;\;}(i, j) \,&=\, P(\pi^{I\;\;}(i, j) \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{I}(i, j)}{p(s_1, \dots,s_{i} \;|\; \mathbf{t}_{p})}\\
-      \widehat{f}^{D\;}(i, j) \,&=\, P(\pi^{D\;}\,(i, j) \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{D}(i, j)}{p(s_1, \dots,s_{i} \;|\; \mathbf{t}_{p})}
+      \widehat{f}^{M}(i, j) \,&=\, P(\pi^M(i, j) \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{M}(i, j)}{p(s_0, \dots,s_{i} \;|\; \mathbf{t}_{p})} \\
+      \widehat{f}^{I\;\;}(i, j) \,&=\, P(\pi^{I\;\;}(i, j) \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{I}(i, j)}{p(s_0, \dots,s_{i} \;|\; \mathbf{t}_{p})}\\
+      \widehat{f}^{D\;}(i, j) \,&=\, P(\pi^{D\;}\,(i, j) \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p}) = \frac{f^{D}(i, j)}{p(s_0, \dots,s_{i} \;|\; \mathbf{t}_{p})}
     \end{aligned}
     \end{equation}
 
@@ -313,22 +313,22 @@
 
     \begin{equation}
     \begin{aligned}
-      \widehat{b}^{M}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^M(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{M}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} \\
-      \widehat{b}^{I\;\;}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^{I}(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{I}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} \\
-      \widehat{b}^{D\;}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^{D}(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{D}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_1, \dots,s_{i}, \mathbf{t}_{p})}
+      \widehat{b}^{M}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^M(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{M}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p})} \\
+      \widehat{b}^{I\;\;}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^{I}(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{I}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p})} \\
+      \widehat{b}^{D\;}(i, j) \,&=\, \frac{P(s_{i+1}, \dots,s_M \;|\; \pi^{D}(i, j), \mathbf{t}_{p})}{p(s_{i+1}, \dots,s_M \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p})} = \frac{b^{D}(i, j)}{p(s_{i+1}, \dots,s_M \;|\; s_0, \dots,s_{i}, \mathbf{t}_{p})}
     \end{aligned}
     \end{equation}
 
     The scaling factors are
 
     \begin{equation}
-      c_{i} = P(s_{i} \;|\; s_1, \dots,s_{i-1},\mathbf{t}_{p})
+      c_{i} = P(s_{i} \;|\; s_0, \dots,s_{i-1},\mathbf{t}_{p})
     \end{equation}
 
     and we can get (\ref{eq131}) with the chain rule.
 
     \begin{equation} \label{eq131}
-      P(s_1, \dots,s_m \;|\; \mathbf{t}_{p}) = \prod\nolimits_{i=1}^{m} c_i
+      P(s_0, \dots,s_m \;|\; \mathbf{t}_{p}) = \prod\nolimits_{i=1}^{m} c_i
     \end{equation}
 
     The scaled version of (\ref{eq115}), (\ref{eq116}) and (\ref{eq117}) can be derived
