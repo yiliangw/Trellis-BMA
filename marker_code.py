@@ -1,8 +1,9 @@
 import numpy as np
 import symbols
 from symbols import symbol2digit, digit2symbol
-import pathlib
+from pathlib import Path
 import json
+import tqdm
 
 class Status():
     MAT = 0 # match (no error or substitution)
@@ -40,19 +41,19 @@ def __remove_markers(seq, markers: list):
 Convert markers from {position: str} (interface for user) 
 to [(position, str)] (sorted with position as key)
 '''
-def __convert_markers(markers: dict) -> list:
-    return sorted(list(markers.items()), key=(lambda t: t[0]))
+def __sort_markers(markers: list) -> list:
+    return sorted(markers, key=(lambda t: t[0]))
 
 
-def encode_single(seq: str, markers: dict):
-    return __add_markers(seq, __convert_markers(markers))
+def encode_sequence(seq: str, markers: list):
+    return __add_markers(seq, __sort_markers(markers))
 
 
 def encode(sequence_path: str, marker_path: str, encoded_path: str, config_path: str):
-    pseq = pathlib.Path(sequence_path)
-    pmarker = pathlib.Path(marker_path)
-    pencoded = pathlib.Path(encoded_path)
-    pconfig = pathlib.Path(config_path)
+    pseq = Path(sequence_path)
+    pmarker = Path(marker_path)
+    pencoded = Path(encoded_path)
+    pconfig = Path(config_path)
 
     pencoded.parent.mkdir(parents=True, exist_ok=True)
     pconfig.parent.mkdir(parents=True, exist_ok=True)
@@ -62,7 +63,7 @@ def encode(sequence_path: str, marker_path: str, encoded_path: str, config_path:
         for line in fmarker:
             line = line.split()
             markers.append([ int(line[0]), line[1] ])
-    markers.sort(key=(lambda t: t[0]))
+    markers = __sort_markers(markers)
 
     length = 0;
     with pseq.open('r') as fseq, pencoded.open('w') as fencoded:
@@ -89,6 +90,144 @@ def encode(sequence_path: str, marker_path: str, encoded_path: str, config_path:
     }
     with pconfig.open('w') as fconfig:
         json.dump(cfg, fconfig, indent=2)
+    
+
+def decode_sequence(samples: list, original_length: int, markers: list, ins_p, del_p, sub_p):
+
+    length = original_length + sum(len(m[1]) for m in markers)
+
+    markers = __sort_markers(markers)
+
+    # Construct template's marker flag, where marker bases are specified by the corresponding 
+    # symbol, and regular bases are specified by None
+    tp_marker_flag = [None for _ in range(length)]
+    cumulative_marker_len = 0
+    for p, m in markers:
+        pos = p + cumulative_marker_len
+        cumulative_marker_len += len(m)
+        tp_marker_flag[pos: pos+len(m)] = symbol2digit(m)
+        
+    rev_tp_marker_flag = list(reversed(tp_marker_flag))
+
+    # Convert the samples to list of digits for easy manipulation
+    _samples = [symbol2digit(s) for s in samples]
+    samples = _samples
+
+    sub_p = sub_p / (1 - del_p - ins_p) # Update sub_p conditioned on Status.MAT
+    transition_p = __get_transition_p(ins_p, del_p)
+    emission_p = __get_initial_emission_p(tp_marker_flag, sub_p)
+    template_p = __get_template_p(sub_p)
+
+    # Calculate the beliefs from each sample
+    nsymbol = symbols.num()
+    beliefs = np.zeros([len(samples), length, nsymbol], dtype=np.float64)
+    rev_beliefs = np.zeros([len(samples), length, nsymbol], dtype=np.float64)
+    
+    tp_marker_flag = [-1] + tp_marker_flag  # We add a dummy start symbol at the beginning of the template
+    rev_tp_marker_flag = [-1] + rev_tp_marker_flag
+    for i, s in enumerate(samples):
+        # We add a dummy start symbol at the beginning of each sample
+        sample = [-1] + s
+        rev_sample = [-1] + list(reversed(s))
+        __decode_sample(beliefs[i, :], sample, tp_marker_flag, transition_p, emission_p, template_p)
+        __decode_sample(rev_beliefs[i, :], rev_sample, rev_tp_marker_flag, transition_p, emission_p, template_p)
+        
+    # Decode the sequence (with markers) based on BMA (soft vote)
+    belief = np.zeros([length, nsymbol], dtype=DTYPE)
+    rbeliefs = np.flip(rev_beliefs, axis=1)
+    
+    half = int(length/2)
+    belief[:half] = np.sum(beliefs[:, 0:half, :], axis=0)
+    belief[half:] = np.sum(rbeliefs[:, half:, :], axis=0)
+    
+    belief = belief / np.sum(belief, axis=1)[:, None]
+    
+    seq_with_markers = np.argmax(belief, axis=1)
+    seq_with_markers = digit2symbol(seq_with_markers)
+
+    # Remove the markers
+    decoded_seq = __remove_markers(seq_with_markers, markers)
+
+    return seq_with_markers, decoded_seq
+
+
+def decode(cluster_path: str, config_path: str, decoded_path: str, ins_p: float, del_p: float, sub_p: float,
+    cluster_seperator='=', decoded_with_marker_path=None):
+
+    with_marker = decoded_with_marker_path != None
+
+    p_cluster = Path(cluster_path)
+    p_config  = Path(config_path)
+    p_decoded = Path(decoded_path)
+    p_decoded.parent.mkdir(parents=True, exist_ok=True)
+    if with_marker:
+        p_with_marker = Path(decoded_with_marker_path)
+        p_with_marker.parent.mkdir(parents=True, exist_ok=True)
+
+    with p_config.open('r') as f:
+        cfg = json.load(f)
+
+
+    markers = cfg['markers']
+    original_length = cfg['original_length']
+
+    # Count the number of the clusters
+    with p_cluster.open('r') as f:
+        cluster_num = sum(1 for line in f if line.startswith(cluster_seperator))
+
+    decoded_seq = []
+    if with_marker:
+        decoded_seq_with_marker = []
+
+    f_cluster = p_cluster.open('r')
+    f_decoded = p_decoded.open('w')
+    if with_marker:
+        f_with_marker = p_with_marker.open('w')
+
+    for _ in tqdm.tqdm(range(cluster_num), desc="Decoding"):
+        samples = []
+        while True:
+            line = f_cluster.readline().strip()
+            if line.startswith(cluster_seperator):
+                break
+            samples.append(line)
+        with_marker, decoded = decode_sequence(
+            samples         = samples,
+            original_length = original_length,
+            markers         = markers,
+            ins_p           = ins_p,
+            del_p           = del_p,
+            sub_p           = sub_p
+        )
+        
+        try:
+            decoded_seq.append(decoded + '\n')
+        except MemoryError:
+            f_decoded.writeline(decoded_seq)
+            decoded_seq.clear()
+            decoded_seq.append(decoded + '\n')
+
+        if with_marker:
+            try:
+                decoded_seq_with_marker.append(with_marker + '\n')
+            except MemoryError:
+                f_with_marker.writelines(decoded_seq_with_marker)
+                decoded_seq_with_marker.clear()
+                decoded_seq_with_marker.append(with_marker + '\n')
+
+    f_cluster.close()
+
+    f_decoded.writelines(decoded_seq)
+    f_decoded.close()
+
+    if with_marker:
+        f_with_marker.writelines(decoded_seq_with_marker)
+        f_with_marker.close()
+
+    
+
+
+
     
 
 '''
@@ -291,61 +430,3 @@ def __decode_sample(out, sample, tp_marker_flag, transition_p, emission_p, templ
 
     return
 
-
-def decode(samples: list, target_length, markers: dict, sub_p, del_p, ins_p):
-
-    length = target_length + len(''.join(list(markers.values()))) # The length of the template sequence with markers
-
-    markers = __convert_markers(markers)
-
-    # Construct template's marker flag, where marker bases are specified by the corresponding 
-    # symbol, and regular bases are specified by None
-    tp_marker_flag = [None for _ in range(length)]
-    cumulative_marker_len = 0
-    for p, m in markers:
-        pos = p + cumulative_marker_len
-        cumulative_marker_len += len(m)
-        tp_marker_flag[pos: pos+len(m)] = symbol2digit(m)
-        
-    rev_tp_marker_flag = list(reversed(tp_marker_flag))
-
-    # Convert the samples to list of digits for easy manipulation
-    _samples = [symbol2digit(s) for s in samples]
-    samples = _samples
-
-    sub_p = sub_p / (1 - del_p - ins_p) # Update sub_p conditioned on Status.MAT
-    transition_p = __get_transition_p(ins_p, del_p)
-    emission_p = __get_initial_emission_p(tp_marker_flag, sub_p)
-    template_p = __get_template_p(sub_p)
-
-    # Calculate the beliefs from each sample
-    nsymbol = symbols.num()
-    beliefs = np.zeros([len(samples), length, nsymbol], dtype=np.float64)
-    rev_beliefs = np.zeros([len(samples), length, nsymbol], dtype=np.float64)
-    
-    tp_marker_flag = [-1] + tp_marker_flag  # We add a dummy start symbol at the beginning of the template
-    rev_tp_marker_flag = [-1] + rev_tp_marker_flag
-    for i, s in enumerate(samples):
-        # We add a dummy start symbol at the beginning of each sample
-        sample = [-1] + s
-        rev_sample = [-1] + list(reversed(s))
-        __decode_sample(beliefs[i, :], sample, tp_marker_flag, transition_p, emission_p, template_p)
-        __decode_sample(rev_beliefs[i, :], rev_sample, rev_tp_marker_flag, transition_p, emission_p, template_p)
-        
-    # Decode the sequence (with markers) based on BMA (soft vote)
-    belief = np.zeros([length, nsymbol], dtype=DTYPE)
-    rbeliefs = np.flip(rev_beliefs, axis=1)
-    
-    half = int(length/2)
-    belief[:half] = np.sum(beliefs[:, 0:half, :], axis=0)
-    belief[half:] = np.sum(rbeliefs[:, half:, :], axis=0)
-    
-    belief = belief / np.sum(belief, axis=1)[:, None]
-    
-    seq_with_markers = np.argmax(belief, axis=1)
-    seq_with_markers = digit2symbol(seq_with_markers)
-
-    # Remove the markers
-    decoded_seq = __remove_markers(seq_with_markers, markers)
-
-    return seq_with_markers, decoded_seq

@@ -17,7 +17,7 @@ def main():
     
     # Metadata for the CNR dataset
     global DATASET_SIZE, DATASET_SEQUENCE_LEN
-    DATASET_SIZE = 10
+    DATASET_SIZE = 5
     DATASET_SEQUENCE_LEN = 110    
     
     ############################
@@ -140,6 +140,10 @@ def run_with_dataset(nmarker, marker_len, ncluster):
 
 def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsample):
 
+    ins_p = 0.01
+    del_p = 0.01
+    sub_p = 0.01
+
     symbols.init()
     data_path = pathlib.Path(__file__).resolve().parent / 'data'
     encode_path = data_path / 'encode'
@@ -152,6 +156,8 @@ def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsa
     decode_path = data_path / 'decode'
     cluster_path_str    = str(decode_path / 'input/clusters.txt')
     decoded_path_str    = str(decode_path / 'output/decoded.txt')
+    decoded_with_mark_path_str \
+                        = str(decode_path / 'output/decoded_with_marker.txt')
 
     cluster_seperator = '=' * 20
 
@@ -175,12 +181,23 @@ def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsa
     simulation.simulate_IDS_channel(
         encoded_path    = encoded_path_str,
         output_path     = cluster_path_str,
-        ins_p           = 0.01,
-        del_p           = 0.01,
-        sub_p           = 0.01,
+        ins_p           = ins_p,
+        del_p           = del_p,
+        sub_p           = sub_p,
         sample_num      = nsample,
         seed            = random_seed,
         seperator       = cluster_seperator
+    )
+
+    marker_code.decode(
+        cluster_path    = cluster_path_str,
+        config_path     = config_path_str,
+        decoded_path    = decoded_path_str,
+        ins_p           = ins_p,
+        del_p           = del_p,
+        sub_p           = sub_p,
+        cluster_seperator        = cluster_seperator,
+        decoded_with_marker_path = decoded_with_mark_path_str
     )
 
     return
