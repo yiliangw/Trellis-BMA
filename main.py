@@ -145,19 +145,28 @@ def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsa
     data_path = pathlib.Path(__file__).resolve().parent / 'data'
     encode_path = data_path / 'encode'
     
-    sequence_path = encode_path / 'input/sequences.txt'
-    marker_path = encode_path / 'input/markers.txt'
+    sequence_path_str   = str(encode_path / 'input/sequences.txt')
+    marker_path_str     = str(encode_path / 'input/markers.txt')
+    encoded_path_str    = str(encode_path / 'output/encoded_sequences.txt')
+    config_path_str     = str(encode_path / 'output/marker_config.json')
 
     decode_path = data_path / 'decode'
 
     simulation.generate_encode_input(
-        seq_num=ncluster,
-        seq_len=seq_len,
-        marker_num=nmarker,
-        marker_len=marker_len,
-        sequence_path=str(sequence_path),
-        marker_path=str(marker_path),
-        seed=random_seed
+        seq_num        = ncluster,
+        seq_len        = seq_len,
+        marker_num     = nmarker,
+        marker_len     = marker_len,
+        sequence_path  = sequence_path_str,
+        marker_path    = marker_path_str,
+        seed           = random_seed
+    )
+
+    marker_code.encode(
+        sequence_path   = sequence_path_str,
+        marker_path     = marker_path_str,
+        encoded_path    = encoded_path_str,
+        config_path     = config_path_str
     )
 
     return

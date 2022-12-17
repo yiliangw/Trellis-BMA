@@ -1,6 +1,8 @@
 import numpy as np
 import symbols
 from symbols import symbol2digit, digit2symbol
+import pathlib
+import json
 
 class Status():
     MAT = 0 # match (no error or substitution)
@@ -42,9 +44,52 @@ def __convert_markers(markers: dict) -> list:
     return sorted(list(markers.items()), key=(lambda t: t[0]))
 
 
-def encode(seq: str, markers: dict):
+def encode_single(seq: str, markers: dict):
     return __add_markers(seq, __convert_markers(markers))
 
+
+def encode(sequence_path: str, marker_path: str, encoded_path: str, config_path: str):
+    pseq = pathlib.Path(sequence_path)
+    pmarker = pathlib.Path(marker_path)
+    pencoded = pathlib.Path(encoded_path)
+    pconfig = pathlib.Path(config_path)
+
+    pencoded.parent.mkdir(parents=True, exist_ok=True)
+    pconfig.parent.mkdir(parents=True, exist_ok=True)
+
+    markers = []
+    with pmarker.open('r') as fmarker:
+        for line in fmarker:
+            line = line.split()
+            markers.append([ int(line[0]), line[1] ])
+    markers.sort(key=(lambda t: t[0]))
+
+    length = 0;
+    with pseq.open('r') as fseq, pencoded.open('w') as fencoded:
+        length = len(fseq.readline().strip())   # All the sequences should have a common length
+        fseq.seek(0)
+        encoded_seqs = []
+        for line in fseq:
+            seq = line.strip()
+            if len(seq) != length:
+                fencoded.truncate(0)
+                raise Exception("Detected sequences with different lengths.")
+            encoded = __add_markers(seq, markers)
+            try:    # In case of memory overflow
+                encoded_seqs.append(encoded + '\n')
+            except MemoryError:
+                fencoded.writelines(encoded_seqs)
+                encoded_seqs.clear()
+                encoded_seqs.append(encoded + '\n')
+        fencoded.writelines(encoded_seqs)
+
+    cfg = {
+        'original_length': length,
+        'markers': markers
+    }
+    with pconfig.open('w') as fconfig:
+        json.dump(cfg, fconfig, indent=2)
+    
 
 '''
 Get the emission probability of a sample symbol given the prior of 
