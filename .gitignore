@@ -3,4 +3,4 @@ __pycache__/
 /derivation/*
 !**/derivation/*.pdf
 !**/derivation/*.tex
-/output
+/data

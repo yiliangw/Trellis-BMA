@@ -1,21 +1,23 @@
 import symbols
-import IDS_channel
+import simulation
 import marker_code
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import sys
+import pathlib
 from tqdm import tqdm
 
 
 def main():
 
+    SIMULATION = True               # Refactoring: Only simulation is guranteed to work for the moment
     ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
     
     # Metadata for the CNR dataset
     global DATASET_SIZE, DATASET_SEQUENCE_LEN
-    DATASET_SIZE = 10000
+    DATASET_SIZE = 10
     DATASET_SEQUENCE_LEN = 110    
     
     ############################
@@ -31,7 +33,6 @@ def main():
     CLUSTER_NUM = DATASET_SIZE      # The number of clusters to process
     MARKER_NUM = 4                  # Numver of marker in each sequence (uniformly distributed)
     MARKER_LEN = 2                  # The length of each marker
-    SIMULATION = False              # True: run with CNR dataset; False: run with simulated IDS channel
     # Dataset configurations
     global INPUT_PATH
     INPUT_PATH = ROOT_PATH + '/dataset'
@@ -140,6 +141,26 @@ def run_with_dataset(nmarker, marker_len, ncluster):
 
 
 def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsample):
+
+    data_path = pathlib.Path(__file__).resolve().parent / 'data'
+    encode_path = data_path / 'encode'
+    
+    sequence_path = encode_path / 'input/sequences.txt'
+    marker_path = encode_path / 'input/markers.txt'
+
+    decode_path = data_path / 'decode'
+
+    simulation.generate_encode_input(
+        seq_num=ncluster,
+        seq_len=seq_len,
+        marker_num=nmarker,
+        marker_len=marker_len,
+        sequence_path=str(sequence_path),
+        marker_path=str(marker_path),
+        seed=random_seed
+    )
+
+    return
 
     fname_results = 'results.txt'
     f_results = open(OUTPUT_PATH + '/' + fname_results, 'w')
