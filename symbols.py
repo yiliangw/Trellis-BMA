@@ -1,6 +1,6 @@
 import copy
 
-def init(symbols):
+def init(symbols=['A', 'C', 'G', 'T']):
     global SYMBOLS, MAP, REV_MAP
     SYMBOLS = list(symbols)
     MAP = {s: i for i, s in enumerate(SYMBOLS)}
@@ -17,3 +17,6 @@ def all():
 
 def num():
     return len(SYMBOLS)
+
+# Initialize symbols to be DNA nucleotides as default
+init()

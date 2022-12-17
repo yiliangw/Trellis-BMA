@@ -46,8 +46,6 @@ def main():
     if not os.path.exists(OUTPUT_PATH):
         os.makedirs(OUTPUT_PATH)
 
-    symbols.init(['A', 'G', 'C', 'T'])
-
     if SIMULATION:
         run_with_simulation(
             nmarker     = MARKER_NUM,
@@ -142,6 +140,7 @@ def run_with_dataset(nmarker, marker_len, ncluster):
 
 def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsample):
 
+    symbols.init()
     data_path = pathlib.Path(__file__).resolve().parent / 'data'
     encode_path = data_path / 'encode'
     
@@ -151,6 +150,10 @@ def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsa
     config_path_str     = str(encode_path / 'output/marker_config.json')
 
     decode_path = data_path / 'decode'
+    cluster_path_str    = str(decode_path / 'input/clusters.txt')
+    decoded_path_str    = str(decode_path / 'output/decoded.txt')
+
+    cluster_seperator = '=' * 20
 
     simulation.generate_encode_input(
         seq_num        = ncluster,
@@ -167,6 +170,17 @@ def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsa
         marker_path     = marker_path_str,
         encoded_path    = encoded_path_str,
         config_path     = config_path_str
+    )
+
+    simulation.simulate_IDS_channel(
+        encoded_path    = encoded_path_str,
+        output_path     = cluster_path_str,
+        ins_p           = 0.01,
+        del_p           = 0.01,
+        sub_p           = 0.01,
+        sample_num      = nsample,
+        seed            = random_seed,
+        seperator       = cluster_seperator
     )
 
     return
