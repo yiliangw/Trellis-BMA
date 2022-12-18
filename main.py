@@ -77,15 +77,17 @@ def run_with_simulation(marker_num, marker_len, cluster_num, random_seed, seq_le
     SYMBOLS = ['A', 'C', 'G', 'T']
     cluster_seperator = ('=' * 20)
 
+    # Initialize simulation
+    sim = simulation.Simulation(ins_p=INS_P, del_p=DEL_P, sub_p=SUB_P, symbols=SYMBOLS, seed=random_seed)
+
     # Generate simulation data
-    simulation.generate_simulation_data(
+    sim.generate_simulation_data(
         seq_num        = cluster_num,
         seq_len        = seq_len,
         marker_num     = marker_num,
         marker_len     = marker_len,
         sequence_path  = sequence_path_str,
         marker_path    = marker_path_str,
-        seed           = random_seed
     )
 
     # Encode
@@ -98,19 +100,15 @@ def run_with_simulation(marker_num, marker_len, cluster_num, random_seed, seq_le
     )
 
     # Simulate a IDS channel
-    simulation.simulate_IDS_channel(
+    sim.simulate_IDS_channel(
         encoded_path    = encoded_path_str,
         output_path     = cluster_path_str,
-        ins_p           = ins_p,
-        del_p           = del_p,
-        sub_p           = sub_p,
         sample_num      = nsample,
-        seed            = random_seed,
         seperator       = cluster_seperator
     )
 
     # Decode
-    decoder = marker_code.Decoder(ins_p=ins_p, del_p=del_p, sub_p=sub_p, symbols=SYMBOLS, np_dtype=np.float64)
+    decoder = marker_code.Decoder(ins_p=INS_P, del_p=DEL_P, sub_p=SUB_P, symbols=SYMBOLS, np_dtype=np.float64)
     decoder.decode(
         cluster_path             = cluster_path_str,
         config_path              = config_path_str,
