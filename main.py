@@ -4,6 +4,7 @@ import marker_code
 import evaluation
 from pathlib import Path
 from tqdm import tqdm
+import numpy as np
 
 
 def main():
@@ -73,7 +74,8 @@ def run_with_simulation(marker_num, marker_len, cluster_num, random_seed, seq_le
 
     evaluation_path_str = str(data_path / 'evaluation')
 
-    cluster_seperator = '=' * 20
+    SYMBOLS = ['A', 'C', 'G', 'T']
+    cluster_seperator = ('=' * 20)
 
     # Generate simulation data
     simulation.generate_simulation_data(
@@ -87,7 +89,8 @@ def run_with_simulation(marker_num, marker_len, cluster_num, random_seed, seq_le
     )
 
     # Encode
-    marker_code.encode(
+    encoder = marker_code.Encoder()
+    encoder.encode(
         sequence_path   = sequence_path_str,
         marker_path     = marker_path_str,
         encoded_path    = encoded_path_str,
@@ -107,15 +110,13 @@ def run_with_simulation(marker_num, marker_len, cluster_num, random_seed, seq_le
     )
 
     # Decode
-    marker_code.decode(
-        cluster_path    = cluster_path_str,
-        config_path     = config_path_str,
-        decoded_path    = decoded_path_str,
-        ins_p           = ins_p,
-        del_p           = del_p,
-        sub_p           = sub_p,
+    decoder = marker_code.Decoder(ins_p=ins_p, del_p=del_p, sub_p=sub_p, symbols=SYMBOLS, np_dtype=np.float64)
+    decoder.decode(
+        cluster_path             = cluster_path_str,
+        config_path              = config_path_str,
+        decoded_path             = decoded_path_str,
+        decoded_with_marker_path = decoded_with_mark_path_str,
         cluster_seperator        = cluster_seperator,
-        decoded_with_marker_path = decoded_with_mark_path_str
     )
 
     # Evaluate with markers
