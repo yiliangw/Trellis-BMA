@@ -1,4 +1,3 @@
-import symbols
 import simulation
 import marker_code
 import evaluation
@@ -53,11 +52,6 @@ def main():
 
 def run_with_simulation(marker_num, marker_len, cluster_num, random_seed, seq_len, nsample):
 
-    ins_p = INS_P
-    del_p = DEL_P
-    sub_p = SUB_P
-
-    symbols.init()
     data_path = Path(__file__).resolve().parent / 'data'
     encode_path = data_path / 'encode'
     
