@@ -2,148 +2,62 @@ import symbols
 import simulation
 import marker_code
 import evaluation
-import random
-import os
-import pathlib
+from pathlib import Path
 from tqdm import tqdm
 
 
 def main():
 
     SIMULATION = True               # Refactoring: Only simulation is guranteed to work for the moment
-    ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
     
     # Metadata for the CNR dataset
     global DATASET_SIZE, DATASET_SEQUENCE_LEN
-    DATASET_SIZE = 5
+    DATASET_SIZE = 10000
     DATASET_SEQUENCE_LEN = 110    
     
     ############################
     ###### Configurations ######
     ############################
-    # Shared configurations
-    global OUTPUT_PATH
-    OUTPUT_PATH = ROOT_PATH + '/output'
     global SUB_P, DEL_P, INS_P
     SUB_P = 0.01
     DEL_P = 0.01
     INS_P = 0.01
-    CLUSTER_NUM = DATASET_SIZE      # The number of clusters to process
     MARKER_NUM = 4                  # Numver of marker in each sequence (uniformly distributed)
     MARKER_LEN = 2                  # The length of each marker
-    # Dataset configurations
-    global INPUT_PATH
-    INPUT_PATH = ROOT_PATH + '/dataset'
-    # Simulation configurations
+    SIM_CLUSTER_NUM     = 5         # The number of clusters to process
     SIM_RANDOM_SEED     = 6219      # Random seed for IDS channel
     SIM_SEQUENCE_LEN    = 110       # Length for each sequence
     SIM_CLUSTER_SIZE    = 6         # Size of each cluster (coverage)
     ############################
     ############################
     
-    if not os.path.exists(OUTPUT_PATH):
-        os.makedirs(OUTPUT_PATH)
-
     if SIMULATION:
         run_with_simulation(
-            nmarker     = MARKER_NUM,
+            marker_num  = MARKER_NUM,
             marker_len  = MARKER_LEN,
-            ncluster    = CLUSTER_NUM,
+            cluster_num = SIM_CLUSTER_NUM,
             random_seed = SIM_RANDOM_SEED,
             seq_len     = SIM_SEQUENCE_LEN,
             nsample     = SIM_CLUSTER_SIZE
         )
     else:
         run_with_dataset(
-            nmarker=MARKER_NUM, 
-            marker_len=MARKER_LEN,
-            ncluster=CLUSTER_NUM
+            marker_num  = MARKER_NUM, 
+            marker_len  = MARKER_LEN,
+            cluster_num = DATASET_SIZE,
         )
 
     return
 
 
-def run_with_dataset(nmarker, marker_len, ncluster):
-    
-    seq_len = DATASET_SEQUENCE_LEN
-    marker_info = [ (int(seq_len/(nmarker+1)*i)-int(marker_len/2), marker_len) for i in range(1, nmarker+1) ]
-    
-    def seperate_markers(sequence):
-        seq = ''
-        markers = {}
-        cumulative_marker_len = 0
-        lastpos = 0
-        for pos, length in marker_info:
-            seq += sequence[lastpos: pos]
-            markers[pos-cumulative_marker_len] = sequence[pos: pos+length]
-            cumulative_marker_len += length
-            lastpos = pos + length
-        seq += sequence[lastpos: ]
-        return seq, markers 
+def run_with_simulation(marker_num, marker_len, cluster_num, random_seed, seq_len, nsample):
 
-    def process_cluster(center, samples):
-        assert(len(center) == seq_len)
-        gold, markers = seperate_markers(center)
-        decoded_with_marker, _ = marker_code.decode(samples[:5], len(gold), markers, SUB_P, DEL_P, INS_P)
-        return decoded_with_marker
-    
-    
-    fname_results = 'results.txt'
-    f_results = open(OUTPUT_PATH + '/' + fname_results, 'w+')
-    f_centers = open(INPUT_PATH + '/Centers.txt', 'r')
-    f_clusters = open(INPUT_PATH + '/Clusters.txt', 'r')
-    
-    f_clusters.readline()   # Skip the first line
-
-    def get_one_cluster():
-        center = f_centers.readline().strip()
-        if len(center) == 0:
-            return None, None
-        samples = []
-        while True:
-            s = f_clusters.readline().strip()
-            if len(s) == 0 or s.startswith('='):
-                break
-            samples.append(s)
-        return center, samples
-    # /get_one_cluster()
-
-    
-    for i in tqdm(range(ncluster), desc="Decoding"):
-        center, samples = get_one_cluster()
-        assert(len(center) == seq_len)
-        if center == None:
-            ncluster = i + 1
-            break
-        decoded = process_cluster(center, samples)
-        f_results.write(decoded + '\n')
-        
-    f_centers.seek(0)
-    f_results.seek(0)
-    template_seqs = []
-    decoded_seqs = []
-    for i in range(ncluster):
-        template_seqs.append(f_centers.readline().strip())
-        decoded_seqs.append(f_results.readline().strip())
-    output_statistics(template_seqs, decoded_seqs)
-
-    f_centers.close()
-    f_clusters.close()
-    f_results.close()
-    
-    print(fname_results + ' saved to ' + OUTPUT_PATH)
-
-    return
-
-
-def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsample):
-
-    ins_p = 0.01
-    del_p = 0.01
-    sub_p = 0.01
+    ins_p = INS_P
+    del_p = DEL_P
+    sub_p = SUB_P
 
     symbols.init()
-    data_path = pathlib.Path(__file__).resolve().parent / 'data'
+    data_path = Path(__file__).resolve().parent / 'data'
     encode_path = data_path / 'encode'
     
     sequence_path_str   = str(encode_path / 'input/sequences.txt')
@@ -163,9 +77,9 @@ def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsa
 
     # Generate simulation data
     simulation.generate_simulation_data(
-        seq_num        = ncluster,
+        seq_num        = cluster_num,
         seq_len        = seq_len,
-        marker_num     = nmarker,
+        marker_num     = marker_num,
         marker_len     = marker_len,
         sequence_path  = sequence_path_str,
         marker_path    = marker_path_str,
@@ -211,9 +125,86 @@ def run_with_simulation(nmarker, marker_len, ncluster, random_seed, seq_len, nsa
         output_dir      = evaluation_path_str,
     )
 
-    print("Simualtion done.")
+    print("\nSimualtion done.")
 
     return
+
+
+def run_with_dataset(marker_num, marker_len, cluster_num):
+
+    print("CNR dataset not supported to run with at the time")
+    return
+    
+    seq_len = DATASET_SEQUENCE_LEN
+    marker_info = [ (int(seq_len/(marker_num+1)*i)-int(marker_len/2), marker_len) for i in range(1, marker_num+1) ]
+    
+    def seperate_markers(sequence):
+        seq = ''
+        markers = {}
+        cumulative_marker_len = 0
+        lastpos = 0
+        for pos, length in marker_info:
+            seq += sequence[lastpos: pos]
+            markers[pos-cumulative_marker_len] = sequence[pos: pos+length]
+            cumulative_marker_len += length
+            lastpos = pos + length
+        seq += sequence[lastpos: ]
+        return seq, markers 
+
+    def process_cluster(center, samples):
+        assert(len(center) == seq_len)
+        gold, markers = seperate_markers(center)
+        decoded_with_marker, _ = marker_code.decode(samples[:5], len(gold), markers, SUB_P, DEL_P, INS_P)
+        return decoded_with_marker
+    
+    
+    fname_results = 'results.txt'
+    f_results = open(OUTPUT_PATH + '/' + fname_results, 'w+')
+    f_centers = open(INPUT_PATH + '/Centers.txt', 'r')
+    f_clusters = open(INPUT_PATH + '/Clusters.txt', 'r')
+    
+    f_clusters.readline()   # Skip the first line
+
+    def get_one_cluster():
+        center = f_centers.readline().strip()
+        if len(center) == 0:
+            return None, None
+        samples = []
+        while True:
+            s = f_clusters.readline().strip()
+            if len(s) == 0 or s.startswith('='):
+                break
+            samples.append(s)
+        return center, samples
+    # /get_one_cluster()
+
+    
+    for i in tqdm(range(cluster_num), desc="Decoding"):
+        center, samples = get_one_cluster()
+        assert(len(center) == seq_len)
+        if center == None:
+            cluster_num = i + 1
+            break
+        decoded = process_cluster(center, samples)
+        f_results.write(decoded + '\n')
+        
+    f_centers.seek(0)
+    f_results.seek(0)
+    template_seqs = []
+    decoded_seqs = []
+    for i in range(cluster_num):
+        template_seqs.append(f_centers.readline().strip())
+        decoded_seqs.append(f_results.readline().strip())
+    output_statistics(template_seqs, decoded_seqs)
+
+    f_centers.close()
+    f_clusters.close()
+    f_results.close()
+    
+    print(fname_results + ' saved to ' + OUTPUT_PATH)
+
+    return
+    
 
 '''
 Add placeholder to sequence without markers to align it to sequence with markers
