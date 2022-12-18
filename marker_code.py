@@ -3,7 +3,9 @@ import symbols
 from symbols import symbol2digit, digit2symbol
 from pathlib import Path
 import json
-import tqdm
+from tqdm import tqdm
+import multiprocessing
+
 
 class Status():
     MAT = 0 # match (no error or substitution)
@@ -92,7 +94,7 @@ def encode(sequence_path: str, marker_path: str, encoded_path: str, config_path:
         json.dump(cfg, fconfig, indent=2)
     
 
-def decode_sequence(samples: list, original_length: int, markers: list, ins_p, del_p, sub_p):
+def decode_sequence(samples: list, original_length: int, markers: list, ins_p: float, del_p: float, sub_p: float):
 
     length = original_length + sum(len(m[1]) for m in markers)
 
@@ -151,18 +153,15 @@ def decode_sequence(samples: list, original_length: int, markers: list, ins_p, d
     return seq_with_markers, decoded_seq
 
 
-def decode(cluster_path: str, config_path: str, decoded_path: str, ins_p: float, del_p: float, sub_p: float,
-    cluster_seperator='=', decoded_with_marker_path=None):
-
-    with_marker = decoded_with_marker_path != None
+def decode(cluster_path: str, config_path: str, decoded_path: str, decoded_with_marker_path: str, 
+    ins_p: float, del_p: float, sub_p: float, cluster_seperator='='):
 
     p_cluster = Path(cluster_path)
     p_config  = Path(config_path)
     p_decoded = Path(decoded_path)
+    p_with_marker = Path(decoded_with_marker_path)
     p_decoded.parent.mkdir(parents=True, exist_ok=True)
-    if with_marker:
-        p_with_marker = Path(decoded_with_marker_path)
-        p_with_marker.parent.mkdir(parents=True, exist_ok=True)
+    p_with_marker.parent.mkdir(parents=True, exist_ok=True)
 
     with p_config.open('r') as f:
         cfg = json.load(f)
@@ -174,54 +173,67 @@ def decode(cluster_path: str, config_path: str, decoded_path: str, ins_p: float,
     with p_cluster.open('r') as f:
         cluster_num = sum(1 for line in f if line.startswith(cluster_seperator))
 
-    decoded_seq = []
-    if with_marker:
-        decoded_seq_with_marker = []
-
     f_cluster = p_cluster.open('r')
     f_decoded = p_decoded.open('w')
-    if with_marker:
-        f_with_marker = p_with_marker.open('w')
+    f_with_marker = p_with_marker.open('w')
 
-    for _ in tqdm.tqdm(range(cluster_num), desc="Decoding"):
-        samples = []
-        while True:
-            line = f_cluster.readline().strip()
-            if line.startswith(cluster_seperator):
-                break
-            samples.append(line)
-        with_marker, decoded = decode_sequence(
-            samples         = samples,
-            original_length = original_length,
-            markers         = markers,
-            ins_p           = ins_p,
-            del_p           = del_p,
-            sub_p           = sub_p
-        )
-        
-        try:
-            decoded_seq.append(decoded + '\n')
-        except MemoryError:
-            f_decoded.writeline(decoded_seq)
-            decoded_seq.clear()
-            decoded_seq.append(decoded + '\n')
+    # def decode_a_cluster(cluster: list):
+    #     return decode_sequence(
+    #         samples         = cluster,
+    #         original_length = original_length,
+    #         markers         = markers,
+    #         ins_p           = ins_p,
+    #         del_p           = del_p,
+    #         sub_p           = sub_p
+    #     )
 
-        if with_marker:
-            try:
-                decoded_seq_with_marker.append(with_marker + '\n')
-            except MemoryError:
-                f_with_marker.writelines(decoded_seq_with_marker)
-                decoded_seq_with_marker.clear()
-                decoded_seq_with_marker.append(with_marker + '\n')
+    ncpu = multiprocessing.cpu_count()
+    ioblk_size = ncpu  # The number of clusters for each IO block
+
+    with multiprocessing.Pool(ncpu) as pool, tqdm(total=cluster_num, desc="Decoding") as pbar:
+        cnt = 0
+        # For each IO block
+        while cnt < cluster_num:
+            # Get the all the clusters of this IO block
+            blk_clusters = []
+            n = min(ioblk_size, cluster_num-cnt)
+            for _ in range(n):
+                cluster = []
+                while True:
+                    line = f_cluster.readline().strip()
+                    if line.startswith(cluster_seperator):
+                        break
+                    else:
+                        cluster.append(line)
+                blk_clusters.append(cluster)
+            # Process the clusters in parallel
+            parm_original_length = [original_length] * n
+            param_markers = [markers] * n
+            param_ins_p = [ins_p] * n
+            param_del_p = [del_p] * n
+            param_sub_p = [sub_p] * n
+
+            res = pool.starmap(decode_sequence, zip(blk_clusters, parm_original_length, param_markers,
+                param_ins_p, param_del_p, param_sub_p))
+            # Ouput the results
+            marker_decoded = []
+            decoded = []
+            for (mk_seq, seq) in res:
+                marker_decoded.append(mk_seq + '\n')
+                decoded.append(seq + '\n')
+            f_with_marker.writelines(marker_decoded)
+            f_decoded.writelines(decoded)
+            
+            # Update the loop
+            cnt += n
+            pbar.update(n)
+
 
     f_cluster.close()
-
-    f_decoded.writelines(decoded_seq)
     f_decoded.close()
+    f_with_marker.close()
 
-    if with_marker:
-        f_with_marker.writelines(decoded_seq_with_marker)
-        f_with_marker.close()
+    return
     
 
 '''

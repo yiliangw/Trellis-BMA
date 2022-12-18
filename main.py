@@ -19,14 +19,14 @@ def main():
     ###### Configurations ######
     ############################
     global SUB_P, DEL_P, INS_P
-    SUB_P = 0.01
-    DEL_P = 0.01
-    INS_P = 0.01
+    SUB_P = 0.03
+    DEL_P = 0.03
+    INS_P = 0.03
     MARKER_NUM = 4                  # Numver of marker in each sequence (uniformly distributed)
     MARKER_LEN = 2                  # The length of each marker
-    SIM_CLUSTER_NUM     = 5         # The number of clusters to process
+    SIM_CLUSTER_NUM     = 20        # The number of clusters to process
     SIM_RANDOM_SEED     = 6219      # Random seed for IDS channel
-    SIM_SEQUENCE_LEN    = 110       # Length for each sequence
+    SIM_SEQUENCE_LEN    = 102       # Length for each sequence
     SIM_CLUSTER_SIZE    = 6         # Size of each cluster (coverage)
     ############################
     ############################
