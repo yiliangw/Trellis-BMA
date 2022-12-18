@@ -167,7 +167,6 @@ def decode(cluster_path: str, config_path: str, decoded_path: str, ins_p: float,
     with p_config.open('r') as f:
         cfg = json.load(f)
 
-
     markers = cfg['markers']
     original_length = cfg['original_length']
 
@@ -223,11 +222,6 @@ def decode(cluster_path: str, config_path: str, decoded_path: str, ins_p: float,
     if with_marker:
         f_with_marker.writelines(decoded_seq_with_marker)
         f_with_marker.close()
-
-    
-
-
-
     
 
 '''

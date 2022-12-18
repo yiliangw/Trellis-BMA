@@ -7,7 +7,7 @@ import symbols as sym
 
 
 
-def generate_encode_input(seq_num, seq_len, marker_num, marker_len, sequence_path: str, marker_path: str, seed: int):
+def generate_simulation_data(seq_num, seq_len, marker_num, marker_len, sequence_path: str, marker_path: str, seed: int):
    
     fseq = pathlib.Path(sequence_path)
     fmarker = pathlib.Path(marker_path)
