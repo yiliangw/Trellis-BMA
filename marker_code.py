@@ -91,6 +91,50 @@ class Encoder():
         with pconfig.open('w') as fconfig:
             json.dump(cfg, fconfig, indent=2)
 
+        return
+
+    @classmethod
+    def split_dataset(cls, marker_len: int, marker_num: int, sequence_path: str, config_path: str):
+        with Path(sequence_path).open('r') as f:
+            # Get sequence length
+            seq_len = f.readlines().strip()
+            marker_info = [ (int(seq_len/(marker_num+1)*i)-int(marker_len/2), marker_len) for i in range(1, marker_num+1) ]
+
+            # Split markers from each sequence
+            markers_list = []
+            f.seek(0)
+            for line in f:
+                seq = line.strip()
+                _, markers = cls.__split_markers(seq, marker_info)
+                markers_list.append(markers)
+
+        # Create the configuration file
+        cfg = {
+            'original_length': seq_len - marker_len * marker_num,
+            'global_marker': False,
+            'markers_list': markers_list
+        }
+
+        with Path(config_path).open('w') as f:
+            json.dump(cfg, f, indent=2)
+        
+        return
+
+
+    @classmethod
+    def __split_markers(cls, sequence, marker_info):
+        seq = ''
+        markers = []
+        cumulative_marker_len = 0
+        lastpos = 0
+        for pos, length in marker_info:
+            seq += sequence[lastpos: pos]
+            markers.append((pos-cumulative_marker_len, sequence[pos: pos+length]))
+            cumulative_marker_len += length
+            lastpos = pos + length
+        seq += sequence[lastpos: ]
+        return seq, markers
+
 
     def __add_markers(self, seq, markers: list):
         res = ''
