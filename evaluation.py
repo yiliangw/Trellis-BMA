@@ -19,6 +19,8 @@ def report(truth_path: str, result_path: str, output_dir: str):
     fname_statistics    = 'statistics.txt'
     fname_err_distr     = 'positional_error_distribution.png'
     fname_pos_acc       = 'positional_accuracy.png'
+    
+    fname_acc       = 'accuracies.json'
 
     # Configure numpy to print arrays in full length
     np.set_printoptions(threshold=sys.maxsize)
@@ -36,17 +38,25 @@ def report(truth_path: str, result_path: str, output_dir: str):
                 seq_error[pos] = int(truth[pos] != result[pos])
             all_error += seq_error
             accuracies[i] = 1 - (np.float64(np.sum(seq_error)) / length)
+        
+    accs = {
+        'max': np.amax(accuracies),
+        'min': np.amin(accuracies),
+        'mean': np.mean(accuracies),
+    }
+    percents = np.array([75, 50, 25])
+    for p, pt in zip(percents, np.percentile(accuracies, percents)):
+        accs["{:02d}%".format(p)] = pt
+    with (p_output / fname_acc).open('w') as f:
+        json.dump(accs, f, indent=4)
 
     f = (p_output / fname_statistics).open('w')
 
     hr = '=' * 20 + '\n'
     acc_str = hr + "ACCURACY\n" + hr
-    acc_str += " max: {:.1%}\n".format(np.amax(accuracies))
-    percents = np.array([75, 50, 25])
-    for p, pt in zip(percents, np.percentile(accuracies, percents)):
-        acc_str += " {:02d}%: {:.1%}\n".format(p, pt)
-    acc_str += " min: {:.1%}\n".format(np.amin(accuracies))
-    acc_str += "mean: {:.1%}\n".format(np.mean(accuracies))
+    
+    for field, val in accs.items():
+        acc_str += (field +  '{:.1%}'.format(val)) + '\n'
 
     print(acc_str)
 
