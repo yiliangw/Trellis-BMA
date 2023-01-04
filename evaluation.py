@@ -56,7 +56,7 @@ def report(truth_path: str, result_path: str, output_dir: str):
     acc_str = hr + "ACCURACY\n" + hr
     
     for field, val in accs.items():
-        acc_str += (field +  '{:.1%}'.format(val)) + '\n'
+        acc_str += (field + ': {:.1%}'.format(val)) + '\n'
 
     print(acc_str)
 
