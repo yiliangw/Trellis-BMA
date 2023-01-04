@@ -6,12 +6,12 @@ import json
 
 def main():
 
-    path_cnr = Path().resolve() / 'dataset'
+    path_cnr = Path().resolve() / 'CNR-dataset'
     path_clusters = path_cnr / 'Clusters.txt'
     global path_centers
     path_centers = path_cnr / 'Centers.txt'
     
-    path_output = Path().resolve() / 'data/CNR'
+    path_output = Path().resolve() / 'data/cnr'
 
     global path_fmt_clusters, path_experiments
     path_fmt_clusters = path_output / 'format_clusters.txt'

@@ -47,12 +47,13 @@ def main():
                     seq_len         = seqlen,
                     random_seed     = RANDOM_SEED
                 )
-    
+                
+    return
     
 
 def run_simulation(ins_p, del_p, sub_p, marker_num, marker_len, cluster_num, cluster_size, seq_len, random_seed):
 
-    cfgstr =  'data/' 'i' + str(int(ins_p*100)) + 'd' + str(int(del_p*100)) + 's' + str(int(sub_p*100)) + \
+    cfgstr =  'data/sim/' 'i' + str(int(ins_p*100)) + 'd' + str(int(del_p*100)) + 's' + str(int(sub_p*100)) + \
         '-len' + str(seq_len) + '-mk' + str(marker_len) + '*' + str(marker_num) + '-cv' + str(cluster_size)
     
     cfg = {
@@ -66,7 +67,8 @@ def run_simulation(ins_p, del_p, sub_p, marker_num, marker_len, cluster_num, clu
     }
     
     data_path = Path(__file__).resolve().parent / cfgstr
-    if data_path.exists():
+    evaluation_path = data_path / 'evaluation'
+    if evaluation_path.exists():
         return
     data_path.mkdir(parents=True, exist_ok=True)
     
@@ -88,7 +90,7 @@ def run_simulation(ins_p, del_p, sub_p, marker_num, marker_len, cluster_num, clu
     decoded_with_mark_path_str \
                         = str(decode_path / 'output/decoded_with_marker.txt')
 
-    evaluation_path_str = str(data_path / 'evaluation')
+    evaluation_path_str = str(evaluation_path)
 
     SYMBOLS = ['A', 'C', 'G', 'T']
     cluster_seperator = ('=' * 20)
