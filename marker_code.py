@@ -37,6 +37,49 @@ class DecodingException(Exception):
         super().__init__(self.message)
 
 
+class DatasetSpliter():
+
+    @classmethod
+    def split_dataset(cls, marker_len: int, marker_num: int, sequence_path: str, config_path: str):
+        with Path(sequence_path).open('r') as f:
+            # Get sequence length
+            seq_len = len(f.readline().strip())
+            marker_info = [ (int(seq_len/(marker_num+1)*i)-int(marker_len/2), marker_len) for i in range(1, marker_num+1) ]
+
+            # Split markers from each sequence
+            markers_list = []
+            f.seek(0)
+            for line in f:
+                seq = line.strip()
+                _, markers = cls.__split_markers(seq, marker_info)
+                markers_list.append(markers)
+
+        # Create the configuration file
+        cfg = {
+            'original_length': seq_len - marker_len * marker_num,
+            'global_marker': False,
+            'markers_list': markers_list
+        }
+
+        with Path(config_path).open('w') as f:
+            json.dump(cfg, f, indent=2)
+        
+        return
+
+    @classmethod
+    def __split_markers(cls, sequence, marker_info):
+        seq = ''
+        markers = []
+        cumulative_marker_len = 0
+        lastpos = 0
+        for pos, length in marker_info:
+            seq += sequence[lastpos: pos]
+            markers.append((pos-cumulative_marker_len, sequence[pos: pos+length]))
+            cumulative_marker_len += length
+            lastpos = pos + length
+        seq += sequence[lastpos: ]
+        return seq, markers
+
 class Encoder():
 
     @classmethod
@@ -86,55 +129,13 @@ class Encoder():
 
         cfg = {
             'original_length': length,
+            'global_marker': True,
             'markers': markers
         }
         with pconfig.open('w') as fconfig:
             json.dump(cfg, fconfig, indent=2)
 
         return
-
-    @classmethod
-    def split_dataset(cls, marker_len: int, marker_num: int, sequence_path: str, config_path: str):
-        with Path(sequence_path).open('r') as f:
-            # Get sequence length
-            seq_len = f.readlines().strip()
-            marker_info = [ (int(seq_len/(marker_num+1)*i)-int(marker_len/2), marker_len) for i in range(1, marker_num+1) ]
-
-            # Split markers from each sequence
-            markers_list = []
-            f.seek(0)
-            for line in f:
-                seq = line.strip()
-                _, markers = cls.__split_markers(seq, marker_info)
-                markers_list.append(markers)
-
-        # Create the configuration file
-        cfg = {
-            'original_length': seq_len - marker_len * marker_num,
-            'global_marker': False,
-            'markers_list': markers_list
-        }
-
-        with Path(config_path).open('w') as f:
-            json.dump(cfg, f, indent=2)
-        
-        return
-
-
-    @classmethod
-    def __split_markers(cls, sequence, marker_info):
-        seq = ''
-        markers = []
-        cumulative_marker_len = 0
-        lastpos = 0
-        for pos, length in marker_info:
-            seq += sequence[lastpos: pos]
-            markers.append((pos-cumulative_marker_len, sequence[pos: pos+length]))
-            cumulative_marker_len += length
-            lastpos = pos + length
-        seq += sequence[lastpos: ]
-        return seq, markers
-
 
     def __add_markers(self, seq, markers: list):
         res = ''
@@ -145,9 +146,6 @@ class Encoder():
             lastp = p
         res += seq[lastp:]
         return res
-
-
-
 
 class Decoder():
 
@@ -224,7 +222,7 @@ class Decoder():
         return seq_with_markers, decoded_seq
 
 
-    def decode(self, cluster_path: str, config_path: str, decoded_path: str, decoded_with_marker_path: str, cluster_seperator='='):
+    def decode(self, cluster_path: str, config_path: str, decoded_path: str, decoded_with_marker_path: str, coverage=None, cluster_seperator='='):
         p_cluster = Path(cluster_path)
         p_config  = Path(config_path)
         p_decoded = Path(decoded_path)
@@ -235,7 +233,7 @@ class Decoder():
         with p_config.open('r') as f:
             cfg = json.load(f)
 
-        markers = cfg['markers']
+        global_marker = cfg['global_marker'] # True if all clusters have a same marker configuration
         original_length = cfg['original_length']
 
         # Count the number of the clusters
@@ -264,10 +262,15 @@ class Decoder():
                             break
                         else:
                             cluster.append(line)
+                    if coverage != None and coverage < len(cluster):
+                        cluster = cluster[0: coverage]
                     blk_clusters.append(cluster)
                 # Process the clusters in parallel
                 parm_original_length = [original_length] * n
-                param_markers = [markers] * n
+                if global_marker:
+                    param_markers = [cfg['markers']] * n
+                else:
+                    param_markers = cfg['markers_list']
 
                 res = pool.starmap(self.decode_sequence, zip(blk_clusters, parm_original_length, param_markers))
                 # Ouput the results
@@ -282,7 +285,6 @@ class Decoder():
                 # Update the loop
                 cnt += n
                 pbar.update(n)
-
 
         f_cluster.close()
         f_decoded.close()
