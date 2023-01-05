@@ -4,7 +4,15 @@ import matplotlib.pyplot as plt
 import sys
 import json
 
-def report(truth_path: str, result_path: str, output_dir: str):
+
+
+
+def report(truth_path: str, result_path: str, output_dir: str, std_output=True):
+
+    def __print_std(msg: str):
+        if std_output:
+            print(msg)
+
     # Input files
     p_truth = Path(truth_path)
     p_result = Path(result_path)
@@ -15,20 +23,14 @@ def report(truth_path: str, result_path: str, output_dir: str):
 
     # Output files
     p_output = Path(output_dir)
+    p_statistics = p_output / 'statistics.json'
+    p_pos_err_rate = p_output / 'positional_error_rate.png'
     p_output.mkdir(parents=True, exist_ok=True)
-    fname_statistics    = 'statistics.txt'
-    fname_err_distr     = 'positional_error_distribution.png'
-    fname_pos_acc       = 'positional_accuracy.png'
-    
-    fname_acc       = 'accuracies.json'
 
-    # Configure numpy to print arrays in full length
-    np.set_printoptions(threshold=sys.maxsize)
-
-    accuracies = np.zeros(size, np.float64)
+    # Calculate the statistics
+    norm_hamdist = np.zeros(size, np.float64)
     all_error = np.zeros(length, dtype=np.int32)
     seq_error = np.zeros(length, dtype=np.int8)
-
     with p_truth.open('r') as f_t, p_result.open('r') as f_r:
         for i in range(size):
             truth, result = f_t.readline().strip(), f_r.readline().strip()
@@ -37,66 +39,47 @@ def report(truth_path: str, result_path: str, output_dir: str):
             for pos in range(length):
                 seq_error[pos] = int(truth[pos] != result[pos])
             all_error += seq_error
-            accuracies[i] = 1 - (np.float64(np.sum(seq_error)) / length)
-        
-    accs = {
-        'max': np.amax(accuracies),
-        'min': np.amin(accuracies),
-        'mean': np.mean(accuracies),
+            norm_hamdist[i] = np.float64(np.sum(seq_error)) / length
+
+    statistics_dict = {}
+
+    # Global normallized hamming distance        
+    norm_hamdist_dict = {
+        'max': np.amax(norm_hamdist),
+        'min': np.amin(norm_hamdist),
+        'mean': np.mean(norm_hamdist),
     }
     percents = np.array([75, 50, 25])
-    for p, pt in zip(percents, np.percentile(accuracies, percents)):
-        accs["{:02d}%".format(p)] = pt
-    with (p_output / fname_acc).open('w') as f:
-        json.dump(accs, f, indent=4)
+    for p, pt in zip(percents, np.percentile(norm_hamdist, percents)):
+        norm_hamdist_dict["{:02d}%".format(p)] = pt
+    statistics_dict['normalized_hamming_distance'] = norm_hamdist_dict
 
-    f = (p_output / fname_statistics).open('w')
-
-    hr = '=' * 20 + '\n'
-    acc_str = hr + "ACCURACY\n" + hr
     
-    for field, val in accs.items():
-        acc_str += (field + ': {:.1%}'.format(val)) + '\n'
+    hr = '=' * 30
+    __print_std(hr + "\nNormalized Hamming Distance\n" + hr)
+    for field, val in norm_hamdist_dict.items():
+        __print_std(field + ': {:.1%}'.format(val))
 
-    print(acc_str)
+    # Positional error rates
+    positional_err_rates = all_error / np.float64(size)
+    statistics_dict['positional_error_rates'] = positional_err_rates.tolist()
 
-    acc_str += '\ncluster accuracies:\n'
-    acc_str += np.array2string(accuracies, separator=', ') + '\n'
+    with p_statistics.open('w') as f:
+        json.dump(statistics_dict, f, indent=2)
 
-    idx_accuracies = 1 - all_error / np.float64(size)
-    acc_str += '\npositional accuracies:\n'
-    acc_str += np.array2string(idx_accuracies, separator=', ') + '\n'
+    __print_std(p_statistics.name + 'saved to ' + str(p_statistics.parent))
 
-    f.write(acc_str + '\n')
-    
-    plt.plot(list(range(length)), idx_accuracies)
-    plt.xlim([0, length])
-    plt.ylim([max(np.amin(idx_accuracies) * 0.85, 0), np.amax(idx_accuracies)*1.15])
-    plt.title('Positional Accuracy')
-    plt.xlabel('Base Index')
-    plt.ylabel('Accuracy')
-    
-    plt.savefig(p_output / fname_pos_acc, format='png')
     plt.clf()
-    print(fname_pos_acc + ' saved to ' + output_dir)
-        
-    sum = np.sum(all_error)
-    err_distribution = np.full(length, 1 / length) if sum == 0 else all_error / sum
-    distr_str = hr + 'ERROR DISTRIBUTION\n' + hr + np.array2string(err_distribution, precision=3, separator=', ')
-    f.write(distr_str + '\n')
-
-    plt.plot(list(range(length)), err_distribution * 100)
+    plt.plot(list(range(length)), positional_err_rates)
     plt.xlim([0, length])
-    plt.ylim([0, min(np.amax(err_distribution)*100, 100)*1.15])
-    plt.title('Positional Error Distribution')
-    plt.xlabel('Base Index')
-    plt.ylabel('Probability Mass (%)')
-    plt.savefig(p_output / fname_err_distr, format='png')
-    plt.clf()
-    print(fname_err_distr + ' saved to ' + output_dir)
+    plt.ylim([max(np.amin(positional_err_rates) * 0.85, 0), np.amax(positional_err_rates)*1.15])
+    plt.title('Positional Error Rate')
+    plt.xlabel('position')
+    plt.ylabel('error rate')
+    plt.savefig(p_pos_err_rate, format='png')
 
-    f.close()
-    print(fname_statistics + ' saved to ' + output_dir)
+    __print_std(p_pos_err_rate.name + ' saved to ' + str(p_pos_err_rate.parent))
+    __print_std(hr + '\n')
 
     return 0
 
