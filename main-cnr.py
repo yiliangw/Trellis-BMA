@@ -5,6 +5,7 @@ import marker_code
 import json
 import yaml
 import random
+import shutil
 
 def main():
 
@@ -56,18 +57,24 @@ def run_CNR(ins_p, del_p, sub_p, marker_num, marker_len, coverage=None, cluster_
     cfgstr =  'i' + str(round(ins_p, 3)) + 'd' + str(round(del_p, 3)) + 's' + str(round(sub_p, 3)) + '-mk' + str(marker_len) + '*' + str(marker_num) + '-cv' + str(coverage) + '-nclus' + str(cluster_num)
 
     path_exp = path_experiments / cfgstr
-    path_exp_centers = path_exp / 'centers.txt'
-    path_exp_clusters = path_exp / 'clusters.txt'
-    path_mkcfg = path_exp / 'mk-config.json'
+    path_byprod = path_exp / 'byproduct'
+    path_exp_centers = path_byprod / 'centers.txt'
+    path_exp_clusters = path_byprod / 'clusters.txt'
+    path_mkcfg = path_byprod / 'mk-config.json'
     path_cfg = path_exp / 'configuration.json'
-    path_decoded = path_exp / 'decoded.txt'
-    path_decoded_with_marker = path_exp / 'decoded_with_marker.txt'
-    path_evaluation = path_exp / 'evaluation'
+    path_decoded = path_byprod / 'decoded.txt'
+    path_decoded_with_marker = path_byprod / 'decoded_with_marker.txt'
+    path_evaluation = path_exp
+    path_done = path_byprod / '.done'
 
-    if path_evaluation.exists():
+    if path_done.exists():
         return
+    elif path_exp.exists():
+        shutil.rmtree(path_exp)
 
     path_exp.mkdir(exist_ok=True, parents=True)
+    path_byprod.mkdir(exist_ok=True, parents=True)
+    path_evaluation.mkdir(exist_ok=True, parents=True)
 
     # Format the CNR cluster file to make it compatible to the marker_code module
     format_CNR_cluster(
@@ -83,7 +90,7 @@ def run_CNR(ins_p, del_p, sub_p, marker_num, marker_len, coverage=None, cluster_
     # Split the markers according to the configuration of the experiment
     spliter = marker_code.DatasetSpliter()
     spliter.split_dataset(
-        marker_len  = 1,
+        marker_len  = marker_len,
         marker_num  = marker_num,
         sequence_path  = str(path_exp_centers),
         config_path    = str(path_mkcfg),
@@ -117,6 +124,11 @@ def run_CNR(ins_p, del_p, sub_p, marker_num, marker_len, coverage=None, cluster_
         result_path     = str(path_decoded_with_marker),
         output_dir      = str(path_evaluation)
     )
+    
+    with path_done.open('w') as f:
+        f.write('1')
+    
+    return
         
 
 def format_CNR_cluster(path_clusters: Path, path_fmt_clusters: Path, path_centers: Path, path_fmt_centers: Path, coverage=None, cluster_num=None, random_seed=6219):
@@ -135,14 +147,25 @@ def format_CNR_cluster(path_clusters: Path, path_fmt_clusters: Path, path_center
                             # seperator. flush_cnt is the real number of clusters,
                             # which may be smaller than the parameter cluster_num.
         cluster = []
+        zero_clusters = []
         def flush_cluster():
             nonlocal cluster, flush_cnt
-            clu = cluster if coverage == None or coverage >= len(cluster) \
-                else random.sample(cluster, coverage)
-            ffmat.writelines(clu)
-            ffmat.write(seperator)
+            if coverage == None:
+                clu = cluster
+            elif len(cluster) == 0:
+                clu = []
+                zero_clusters.append(flush_cnt)
+            elif coverage > len(cluster):
+                clu = cluster * int(coverage / len(cluster))
+                clu += random.sample(cluster, coverage-len(clu))
+            else:
+                clu = random.sample(cluster, coverage)
+            
+            if not len(clu) == 0:
+                ffmat.writelines(clu)
+                ffmat.write(seperator)
             flush_cnt += 1
-            cluster.clear()
+            cluster = []
 
         for line in f:
             if line.startswith(seperator[0]):
@@ -159,7 +182,8 @@ def format_CNR_cluster(path_clusters: Path, path_fmt_clusters: Path, path_center
     with path_centers.open('r') as f, path_fmt_centers.open('w') as ffmat:
         for i in range(flush_cnt):
             line = f.readline()
-            ffmat.write(line)
+            if i not in zero_clusters:
+                ffmat.write(line)
 
     return
 
