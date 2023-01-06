@@ -52,17 +52,18 @@ def report(truth_path: str, result_path: str, output_dir: str, std_output=True):
     percents = np.array([75, 50, 25])
     for p, pt in zip(percents, np.percentile(norm_hamdist, percents)):
         norm_hamdist_dict["{:02d}%".format(p)] = pt
-    statistics_dict['normalized_hamming_distance'] = norm_hamdist_dict
 
-    
     hr = '=' * 30
     __print_std(hr + "\nNormalized Hamming Distance\n" + hr)
     for field, val in norm_hamdist_dict.items():
         __print_std(field + ': {:.1%}'.format(val))
 
+    statistics_dict['normalized_hamming_distance'] = norm_hamdist_dict
+    
     # Positional error rates
     positional_err_rates = all_error / np.float64(size)
     statistics_dict['positional_error_rates'] = positional_err_rates.tolist()
+    statistics_dict['cluster_error_rates'] = norm_hamdist.tolist()
 
     with p_statistics.open('w') as f:
         json.dump(statistics_dict, f, indent=2)
