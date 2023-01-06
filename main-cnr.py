@@ -147,23 +147,22 @@ def format_CNR_cluster(path_clusters: Path, path_fmt_clusters: Path, path_center
                             # seperator. flush_cnt is the real number of clusters,
                             # which may be smaller than the parameter cluster_num.
         cluster = []
-        zero_clusters = []
+        purged_clusters = []
         def flush_cluster():
             nonlocal cluster, flush_cnt
             if coverage == None:
                 clu = cluster
-            elif len(cluster) == 0:
+            elif len(cluster) < coverage:
                 clu = []
-                zero_clusters.append(flush_cnt)
-            elif coverage > len(cluster):
-                clu = cluster * int(coverage / len(cluster))
-                clu += random.sample(cluster, coverage-len(clu))
             else:
                 clu = random.sample(cluster, coverage)
             
             if not len(clu) == 0:
                 ffmat.writelines(clu)
                 ffmat.write(seperator)
+            else:
+                purged_clusters.append(flush_cnt)   # Do not use clusters with insufficient samples
+                
             flush_cnt += 1
             cluster = []
 
@@ -182,7 +181,7 @@ def format_CNR_cluster(path_clusters: Path, path_fmt_clusters: Path, path_center
     with path_centers.open('r') as f, path_fmt_centers.open('w') as ffmat:
         for i in range(flush_cnt):
             line = f.readline()
-            if i not in zero_clusters:
+            if i not in purged_clusters:
                 ffmat.write(line)
 
     return
