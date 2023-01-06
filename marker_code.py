@@ -39,8 +39,7 @@ class DecodingException(Exception):
 
 class DatasetSpliter():
 
-    @classmethod
-    def split_dataset(cls, marker_len: int, marker_num: int, sequence_path: str, config_path: str):
+    def split_dataset(self, marker_len: int, marker_num: int, sequence_path: str, config_path: str):
         with Path(sequence_path).open('r') as f:
             # Get sequence length
             seq_len = len(f.readline().strip())
@@ -51,34 +50,28 @@ class DatasetSpliter():
             f.seek(0)
             for line in f:
                 seq = line.strip()
-                _, markers = cls.__split_markers(seq, marker_info)
+                markers = self.__split_sequence(seq, marker_info)
                 markers_list.append(markers)
 
         # Create the configuration file
         cfg = {
-            'original_length': seq_len - marker_len * marker_num,
+            'total_length': seq_len,
+            'data_length': seq_len - marker_len * marker_num,
             'global_marker': False,
             'markers_list': markers_list
         }
-
         with Path(config_path).open('w') as f:
-            json.dump(cfg, f, indent=2)
-        
+            json.dump(cfg, f)
         return
-
-    @classmethod
-    def __split_markers(cls, sequence, marker_info):
-        seq = ''
+    
+    def __split_sequence(self, seq, marker_info):
+        cumulative_marker = 0
         markers = []
-        cumulative_marker_len = 0
-        lastpos = 0
         for pos, length in marker_info:
-            seq += sequence[lastpos: pos]
-            markers.append((pos-cumulative_marker_len, sequence[pos: pos+length]))
-            cumulative_marker_len += length
-            lastpos = pos + length
-        seq += sequence[lastpos: ]
-        return seq, markers
+            markers.append((pos-cumulative_marker, seq[pos:pos+length]))
+            cumulative_marker += length
+        return markers
+
 
 class Encoder():
 
@@ -166,8 +159,8 @@ class Decoder():
         self.sym_helper = SymbolHelper(symbols)
         self.np_dtype = np_dtype
 
-    def decode_sequence(self, samples: list, original_length: int, markers: list):
-        length = original_length + sum(len(m[1]) for m in markers)
+    def decode_sequence(self, samples: list, data_length: int, markers: list):
+        length = data_length + sum(len(m[1]) for m in markers)
         markers = self.__sort_markers(markers)
 
         # Construct template's marker flag, where marker bases are specified by the corresponding 
@@ -234,7 +227,7 @@ class Decoder():
             cfg = json.load(f)
 
         global_marker = cfg['global_marker'] # True if all clusters have a same marker configuration
-        original_length = cfg['original_length']
+        data_length = cfg['data_length']
 
         # Count the number of the clusters
         with p_cluster.open('r') as f:
@@ -246,7 +239,6 @@ class Decoder():
 
         ncpu = multiprocessing.cpu_count()
         ioblk_size = ncpu  # The number of clusters for each IO block
-
         with multiprocessing.Pool(ncpu) as pool, tqdm(total=cluster_num, desc="Decoding") as pbar:
             cnt = 0
             # For each IO block
@@ -266,11 +258,11 @@ class Decoder():
                         cluster = cluster[0: coverage]
                     blk_clusters.append(cluster)
                 # Process the clusters in parallel
-                parm_original_length = [original_length] * n
+                parm_original_length = [data_length] * n
                 if global_marker:
                     param_markers = [cfg['markers']] * n
                 else:
-                    param_markers = cfg['markers_list']
+                    param_markers = cfg['markers_list'][cnt: cnt+n]
 
                 res = pool.starmap(self.decode_sequence, zip(blk_clusters, parm_original_length, param_markers))
                 # Ouput the results
