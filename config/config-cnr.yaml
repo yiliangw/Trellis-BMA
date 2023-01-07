@@ -1,9 +1,8 @@
 # The insertion, deletion and substitution rates of the 
-# simulated IDS channel
+# IDS channel
 IDS_rates:
+  - {ins_p: 0.008, del_p: 0.008, sub_p: 0.008}
   - {ins_p: 0.01, del_p: 0.01, sub_p: 0.01}
-  - {ins_p: 0.015, del_p: 0.015, sub_p: 0.015}
-  - {ins_p: 0.02, del_p: 0.02, sub_p: 0.02}
 
 # The configurations of markers. The total number of marker symbols 
 # is (number * length)
@@ -11,14 +10,14 @@ marker_configurations:
   - {number: 6, length: 1}
   - {number: 10, length: 1}
 
-# The coverage for each cluster (null denotes using all the samples)
-coverages: [null, 1, 2, 3, 4, 6, 8, 10]
+# The coverage for each cluster (null denotes using all the available samples)
+coverages: [null, 4, 6, 8]
 
 # The random seed for choosing samples from a cluster when coverage != null
 random_seed: 6219
 
 # The number of clusters to run with for each configuation
-# combination above. null for all the available 10,000 clusters 
+# combination above. (null denotes using all the available 10,000 clusters) 
 cluster_number: null
 
 # The output path (absolute path or relative path to main-cnr.py)

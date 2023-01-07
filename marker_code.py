@@ -121,7 +121,7 @@ class Encoder():
             fencoded.writelines(encoded_seqs)
 
         cfg = {
-            'original_length': length,
+            'data_length': length,
             'global_marker': True,
             'markers': markers
         }

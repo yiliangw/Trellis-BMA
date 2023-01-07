@@ -1,0 +1,25 @@
+# The insertion, deletion and substitution rates of the 
+# simulated IDS channel
+IDS_rates:
+  - {ins_p: 0.01, del_p: 0.01, sub_p: 0.01}
+  - {ins_p: 0.015, del_p: 0.015, sub_p: 0.015}
+
+# The configurations of markers. The total number of marker symbols 
+# is (number * length)
+sequence_configurations:
+  - {data_length: 104, marker_number: 6, marker_length: 1}
+  - {data_length: 100, marker_number: 10, marker_length: 1}
+
+# The coverage for each cluster
+coverages: [4, 6, 8]
+
+# The random seed for generating the ground-truth sequences 
+# and simulating a IDS channel
+random_seed: 6219
+
+# The number of clusters to run with for each configuation
+# combination above.
+cluster_number: 5
+
+# The output path (absolute path or relative path to main-cnr.py)
+output_path: "./data/sim"

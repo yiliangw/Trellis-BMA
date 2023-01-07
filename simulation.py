@@ -12,7 +12,7 @@ class Simulation():
         self.sub_p = sub_p
         self.seed = seed
 
-    def generate_simulation_data(self, seq_num, seq_len, marker_num, marker_len, sequence_path: str, marker_path: str):
+    def generate_simulation_data(self, seq_num, data_len, marker_num, marker_len, sequence_path: str, marker_path: str):
     
         fseq = pathlib.Path(sequence_path)
         fmarker = pathlib.Path(marker_path)
@@ -24,11 +24,11 @@ class Simulation():
         symbols = self.symbols
         with fseq.open('w') as f:
             for _ in range(seq_num):
-                f.write(''.join(random.choices(symbols, k=seq_len)) + '\n')
+                f.write(''.join(random.choices(symbols, k=data_len)) + '\n')
 
         with fmarker.open('w') as f:
             for i in range(1, marker_num+1):
-                position = int(seq_len/(marker_num+1)*i)
+                position = int(data_len/(marker_num+1)*i)
                 marker = ''.join(random.choices(symbols, k=marker_len))
                 f.write('{} {}\n'.format(position, marker))
     
