@@ -1,29 +1,42 @@
 # Trace Reconstruction with Marker Code
 
-This is a python implementation for trace reconstruction with marker code [[1]](#r1) in the context of DNA-based data storage. You can run it directly with either the [CNR dataset](https://github.com/microsoft/clustered-nanopore-reads-dataset) [[2]](#r2) or a simple simulated IDS channel ([IDS_channel.py](IDS_channel.py)). A [derivation](derivation/derivation.pdf) for relevant formulas is also provided.
+This is a python implementation for trace reconstruction with marker code [[1]](#r1) in the context of DNA-based data storage. You can run it directly with either the [CNR dataset](https://github.com/microsoft/clustered-nanopore-reads-dataset) [[2]](#r2) or a simple simulated IDS channel. A [derivation](derivation/derivation.pdf) for relevant formulas is also provided.
 
 ## Quick Start
 ```
 pip3 install -r requirements.txt
-python3 main.py
+
+# Run simulation
+python3 main-sim.py
+
+# Or test on the CNR dataset
+python3 main-cnr.py 
 ```
-This will process all of the 10,000 clusters in the CNR dataset and may take some time. If you want to run with fewer clusters, please configure `CLUSTER_NUM` in the `main()` function of [main.py](main.py). The results and statistics will be available in `output/` after the program terminates.
+It will take some time if you choose to test on the CNR dataset using the provided configuration. To have a quick start, you may be more willing to run the simulation. Also, please refer to the [configuration files](config) to customize your experiments. The results and statistics will be available in `./data` after the program terminates.
 
 ## Dependencies
 
-+ python3 (tested on python3.8)
++ python3
 + numpy
 + matplotlib
 + tqdm
++ yaml
 
+## Configuration
 
-## Configurations
-
-For available configurations, please check the `main()` function of [main.py](main.py).
+For available configurations for experiments, please check [config-cnr.yaml](config/config-cnr.yaml) and [config-sim.yaml](config/config-sim.yaml).
 
 ## Derivation
 
-A [derivation](derivation/derivation.pdf) for relevent formulas is available in `derivation/`, with LaTeX [source](derivation/derivation.tex). 
+A [derivation](derivation/derivation.pdf) for relevent formulas is available, with LaTeX [source](derivation/derivation.tex). 
+
+## TODO
+- [ ] Learn the properties of IDS channels with EM algorithm.
+
+## Acknowledgement
+
+I am grateful to Prof. [Djordje Jevdjic](https://www.comp.nus.edu.sg/~jevdjic/) for his module [CS6219](https://nusmods.com/modules/CS6219/advanced-topics-in-computer-systems) (22/23-SEM1). It is both inspiring and interesting. I must also thank Prof. [Gim Hee Lee](https://www.comp.nus.edu.sg/~leegh/) for the great module [CS5340](https://www.youtube.com/playlist?list=PLxg0CGqViygOb9Eyc8IXM27doxjp2SK0H) (22/23-SEM1), which is really rewarding.
+
 
 ## References
 
